@@ -1,4 +1,4 @@
-export type { ImageMap } from './assets.ts';
+export type { ImageMap, MaskMap } from './assets.ts';
 export { loadImages } from './assets.ts';
 export { CanvasRenderer } from './canvas.ts';
 

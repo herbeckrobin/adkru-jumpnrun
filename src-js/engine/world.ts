@@ -2,7 +2,15 @@ import { DEFAULT_CONFIG, type GameConfig } from './config/index.ts';
 import { EventBus } from './events/index.ts';
 import { playerHitsCoin, playerHitsObstacle, playerLandsOnPlatform } from './physics.ts';
 import { Spawner } from './spawner.ts';
-import type { Coin, GameState, GameStatus, Obstacle, Platform, Player } from './types.ts';
+import type {
+  Coin,
+  GameState,
+  GameStatus,
+  Obstacle,
+  Platform,
+  Player,
+  SpriteMask,
+} from './types.ts';
 
 /** Frames the "Level X" banner stays visible (2 s at 60 Hz). */
 const LEVEL_TEXT_FRAMES = 120;
@@ -81,6 +89,16 @@ export class GameWorld {
     if (this._status === 'paused') this._status = 'running';
   }
 
+  /**
+   * Hand over sprite masks built by the renderer. Spawned entities from this
+   * point on get pixel-perfect hitboxes; the current player mask is also
+   * patched in place. Safe to call before or after `start()`.
+   */
+  setMasks(masks: ReadonlyMap<string, SpriteMask>): void {
+    this.spawner.setMasks(masks);
+    this._player.mask = this.spawner.playerMask();
+  }
+
   // ── Fixed-step update (called by GameLoop at dt = 1/60) ──────────────────
 
   update(_dt: number): void {
@@ -149,7 +167,7 @@ export class GameWorld {
         this._obstacles.splice(i, 1);
         continue;
       }
-      if (playerHitsObstacle(this._player, o)) {
+      if (playerHitsObstacle(this._player, o, this.cfg.hitboxBuffer)) {
         this.triggerGameOver();
         return;
       }
@@ -164,7 +182,7 @@ export class GameWorld {
         this._coins.splice(i, 1);
         continue;
       }
-      if (!c.collected && playerHitsCoin(this._player, c)) {
+      if (!c.collected && playerHitsCoin(this._player, c, this.cfg.coinMagnet)) {
         c.collected = true;
         this._coins.splice(i, 1);
         this._score++;
@@ -213,6 +231,7 @@ export class GameWorld {
       velocityY: 0,
       jumpCount: 0,
       state: 'idle',
+      mask: this.spawner.playerMask(),
     };
   }
 

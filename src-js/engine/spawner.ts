@@ -1,18 +1,26 @@
 import type { GameConfig } from './config/index.ts';
-import type { Coin, Obstacle, Platform } from './types.ts';
+import type { Coin, Obstacle, Platform, SpriteMask } from './types.ts';
 
 export class Spawner {
+  private masks: ReadonlyMap<string, SpriteMask> = new Map();
+
   constructor(private readonly cfg: GameConfig) {}
+
+  setMasks(masks: ReadonlyMap<string, SpriteMask>): void {
+    this.masks = masks;
+  }
 
   obstacle(_level: number): Obstacle {
     const width = 60 + Math.random() * 50;
     const height = 80 + Math.random() * 60;
+    const imageKey = `obstacle-${Math.floor(Math.random() * 3)}`;
     return {
       x: this.cfg.canvasWidth + 50,
       y: this.cfg.canvasHeight - this.cfg.groundOffset - height,
       width,
       height,
-      imageKey: `obstacle-${Math.floor(Math.random() * 3)}`,
+      imageKey,
+      mask: this.masks.get(imageKey),
     };
   }
 
@@ -30,6 +38,7 @@ export class Spawner {
       width: 32,
       height: 32,
       collected: false,
+      mask: this.masks.get('coin'),
     };
   }
 
@@ -54,6 +63,12 @@ export class Spawner {
       width: 32,
       height: 32,
       collected: false,
+      mask: this.masks.get('coin'),
     };
+  }
+
+  playerMask(): SpriteMask | undefined {
+    // Accept several key conventions so WP-side sprite naming stays flexible.
+    return this.masks.get('player') ?? this.masks.get('player-idle') ?? this.masks.get('player-jump');
   }
 }

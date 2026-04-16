@@ -29,6 +29,10 @@ export const GameConfigSchema = z.object({
   playerWidth: z.number().positive().default(70),
   playerHeight: z.number().positive().default(70),
   playerStartX: z.number().default(120),
+  /** Shrink obstacle hitbox by this many px on all sides (positive = forgiving). */
+  hitboxBuffer: z.number().default(10),
+  /** Grow coin hitbox by this many px on all sides (positive = easier to grab). */
+  coinMagnet: z.number().default(10),
 });
 
 export type GameConfig = z.infer<typeof GameConfigSchema>;

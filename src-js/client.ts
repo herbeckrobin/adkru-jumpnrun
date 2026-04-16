@@ -12,6 +12,8 @@ export interface JumpnrunConfig {
   width?: number;
   height?: number;
   discountCode?: string;
+  /** Show collision hitboxes + sprite masks on load. Toggle at runtime with `D`. */
+  debug?: boolean;
 }
 
 // ── Minimal DOM UI (created programmatically, no PHP template required) ───
@@ -163,13 +165,6 @@ export function bootstrap(root: HTMLElement, rawConfig: JumpnrunConfig = {}): vo
   // Start loading sprites non-blocking — game shows start screen immediately.
   // The closure in the render loop captures the `images` variable by reference,
   // so reassigning it when the promise resolves is picked up on the next frame.
-  let images: ImageMap = new Map();
-  if (rawConfig.images) {
-    loadImages(rawConfig.images).then((loaded) => {
-      images = loaded;
-    });
-  }
-
   const ctx = ui.canvas.getContext('2d');
   if (!ctx) {
     console.error('jumpnrun: canvas 2d context unavailable');
@@ -177,7 +172,21 @@ export function bootstrap(root: HTMLElement, rawConfig: JumpnrunConfig = {}): vo
   }
 
   const renderer = new CanvasRenderer(ctx, engineCfg.canvasWidth, engineCfg.canvasHeight);
+  renderer.debug = {
+    enabled: rawConfig.debug === true,
+    hitboxBuffer: engineCfg.hitboxBuffer,
+    coinMagnet: engineCfg.coinMagnet,
+  };
   const world = new GameWorld(engineCfg);
+
+  let images: ImageMap = new Map();
+  if (rawConfig.images) {
+    loadImages(rawConfig.images).then(({ images: loaded, masks }) => {
+      images = loaded;
+      renderer.setMasks(masks);
+      world.setMasks(masks);
+    });
+  }
   const loop = new GameLoop(
     (dt) => world.update(dt),
     () => renderer.render(world.state, images),
@@ -203,6 +212,9 @@ export function bootstrap(root: HTMLElement, rawConfig: JumpnrunConfig = {}): vo
     if (e.code === 'Space') {
       e.preventDefault();
       jump();
+    } else if (e.code === 'KeyD') {
+      renderer.debug = { ...renderer.debug, enabled: !renderer.debug.enabled };
+      console.info(`[jumpnrun] Debug ${renderer.debug.enabled ? 'ON' : 'OFF'}`);
     }
   });
   ui.canvas.addEventListener('click', jump);

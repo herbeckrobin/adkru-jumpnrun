@@ -1,5 +1,15 @@
-import type { GameState } from '../engine/types.ts';
-import type { ImageMap } from './assets.ts';
+import { fitRect } from '../engine/fit.ts';
+import type { GameState, SpriteMask } from '../engine/types.ts';
+import type { ImageMap, MaskMap } from './assets.ts';
+
+export interface DebugOptions {
+  /** Draw collision hitboxes + solid mask pixels over everything. */
+  enabled: boolean;
+  /** Obstacle AABB inset (positive = shrink). Must mirror `cfg.hitboxBuffer`. */
+  hitboxBuffer: number;
+  /** Coin AABB inset (positive = grow). Must mirror `cfg.coinMagnet`. */
+  coinMagnet: number;
+}
 
 /** Solid-color fallbacks when sprite images are missing. */
 const FALLBACK: Record<string, string> = {
@@ -15,11 +25,18 @@ const FALLBACK: Record<string, string> = {
 };
 
 export class CanvasRenderer {
+  debug: DebugOptions = { enabled: false, hitboxBuffer: 0, coinMagnet: 0 };
+  private masks: MaskMap = new Map();
+
   constructor(
     private readonly ctx: CanvasRenderingContext2D,
     private readonly width: number,
     private readonly height: number,
   ) {}
+
+  setMasks(masks: MaskMap): void {
+    this.masks = masks;
+  }
 
   render(state: GameState, images: ImageMap): void {
     const { ctx, width, height } = this;
@@ -68,6 +85,119 @@ export class CanvasRenderer {
     if (state.showLevelText) {
       this.drawLevelBanner(state.level);
     }
+
+    // ── Debug overlay ────────────────────────────────────────────────────────
+    if (this.debug.enabled) {
+      this.drawDebugOverlay(state);
+    }
+  }
+
+  private drawDebugOverlay(state: GameState): void {
+    const buf = this.debug.hitboxBuffer;
+    const mag = this.debug.coinMagnet;
+
+    // Player: fit-rect (= actual hitbox) + pixel mask
+    const playerFit = fitRect(state.player, state.player.mask);
+    this.drawMaskOverlay(playerFit, state.player.mask, 'rgba(0,200,255,0.4)');
+    this.drawHitbox(
+      playerFit.x + buf,
+      playerFit.y + buf,
+      playerFit.width - 2 * buf,
+      playerFit.height - 2 * buf,
+      '#00e5ff',
+      'Player',
+    );
+
+    for (const o of state.obstacles) {
+      const fit = fitRect(o, o.mask);
+      this.drawMaskOverlay(fit, o.mask, 'rgba(255,70,70,0.4)');
+      this.drawHitbox(
+        fit.x + buf,
+        fit.y + buf,
+        fit.width - 2 * buf,
+        fit.height - 2 * buf,
+        '#ff3b3b',
+      );
+    }
+
+    for (const c of state.coins) {
+      const fit = fitRect(c, c.mask);
+      this.drawHitbox(
+        fit.x - mag,
+        fit.y - mag,
+        fit.width + 2 * mag,
+        fit.height + 2 * mag,
+        '#ffeb3b',
+      );
+    }
+
+    // Legend
+    const { ctx } = this;
+    ctx.save();
+    ctx.fillStyle = 'rgba(0,0,0,0.7)';
+    ctx.fillRect(this.width - 220, 12, 208, 64);
+    ctx.font = 'bold 12px system-ui, sans-serif';
+    ctx.fillStyle = '#00e5ff';
+    ctx.fillText(`■ Player hitbox (buffer ${buf}px)`, this.width - 212, 30);
+    ctx.fillStyle = '#ff3b3b';
+    ctx.fillText(`■ Obstacle hitbox (buffer ${buf}px)`, this.width - 212, 48);
+    ctx.fillStyle = '#ffeb3b';
+    ctx.fillText(`■ Coin magnet (${mag}px)`, this.width - 212, 66);
+    ctx.restore();
+  }
+
+  private drawHitbox(
+    x: number,
+    y: number,
+    w: number,
+    h: number,
+    color: string,
+    label?: string,
+  ): void {
+    const { ctx } = this;
+    ctx.save();
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 2;
+    ctx.setLineDash([4, 3]);
+    ctx.strokeRect(x, y, w, h);
+    if (label) {
+      ctx.setLineDash([]);
+      ctx.fillStyle = color;
+      ctx.font = 'bold 11px system-ui, sans-serif';
+      ctx.fillText(label, x, y - 4);
+    }
+    ctx.restore();
+  }
+
+  /**
+   * Paints the solid (opaque) pixels of the sprite mask in `color`, using the
+   * same image → rect scale as the renderer, so it lines up with what you see.
+   */
+  private drawMaskOverlay(
+    rect: { x: number; y: number; width: number; height: number },
+    mask: SpriteMask | undefined,
+    color: string,
+  ): void {
+    if (!mask) return;
+    const { ctx } = this;
+    // Match the tight-crop renderer: tight bbox → rect.
+    const scaleX = rect.width / mask.tightW;
+    const scaleY = rect.height / mask.tightH;
+    ctx.save();
+    ctx.fillStyle = color;
+    for (let my = mask.tightY; my < mask.tightY + mask.tightH; my += 2) {
+      for (let mx = mask.tightX; mx < mask.tightX + mask.tightW; mx += 2) {
+        if (mask.mask[my * mask.width + mx] === 1) {
+          ctx.fillRect(
+            rect.x + (mx - mask.tightX) * scaleX,
+            rect.y + (my - mask.tightY) * scaleY,
+            2 * scaleX,
+            2 * scaleY,
+          );
+        }
+      }
+    }
+    ctx.restore();
   }
 
   // ── Private helpers ──────────────────────────────────────────────────────
@@ -154,8 +284,10 @@ export class CanvasRenderer {
   private drawCoin(images: ImageMap, x: number, y: number, w: number, h: number): void {
     const img = images.get('coin');
     if (img) {
-      this.ctx.drawImage(img, x, y, w, h);
-    } else {
+      this.sprite(images, 'coin', x, y, w, h);
+      return;
+    }
+    {
       // Draw a glowing gold circle as fallback
       const cx = x + w / 2;
       const cy = y + h / 2;
@@ -181,7 +313,24 @@ export class CanvasRenderer {
   private sprite(images: ImageMap, key: string, x: number, y: number, w: number, h: number): void {
     const img = images.get(key);
     if (img) {
-      this.ctx.drawImage(img, x, y, w, h);
+      const mask = this.masks.get(key);
+      if (mask) {
+        // Contain-fit: preserve aspect, crop to tight bbox, centered in slot.
+        const fit = fitRect({ x, y, width: w, height: h }, mask);
+        this.ctx.drawImage(
+          img,
+          mask.tightX,
+          mask.tightY,
+          mask.tightW,
+          mask.tightH,
+          fit.x,
+          fit.y,
+          fit.width,
+          fit.height,
+        );
+      } else {
+        this.ctx.drawImage(img, x, y, w, h);
+      }
     } else {
       this.ctx.fillStyle = FALLBACK[key] ?? '#888';
       this.ctx.fillRect(x, y, w, h);
