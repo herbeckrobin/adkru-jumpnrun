@@ -233,11 +233,12 @@ declare global {
 
 function autoInit(): void {
   const root = document.getElementById('jumpnrun-root');
-  if (root) {
-    bootstrap(root, window.JumpnrunConfig ?? {});
+  if (root && window.JumpnrunConfig) {
+    bootstrap(root, window.JumpnrunConfig);
   }
-  window.Jumpnrun = { bootstrap };
 }
+
+window.Jumpnrun = { bootstrap };
 
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', autoInit);
