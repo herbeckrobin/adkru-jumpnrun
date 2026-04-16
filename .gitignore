@@ -26,6 +26,7 @@ vendor/
 composer.lock
 
 # Plugin build artifacts (Vite-Output)
+assets/game/*.js
 assets/game/*.mjs
 assets/game/*.css
 assets/game/*.map
