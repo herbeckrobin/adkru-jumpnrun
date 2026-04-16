@@ -16,7 +16,8 @@ export default defineConfig({
     },
     rollupOptions: {
       output: {
-        assetFileNames: (info) => (info.name?.endsWith('.css') === true ? 'client.css' : '[name][extname]'),
+        assetFileNames: (info) =>
+          info.name?.endsWith('.css') === true ? 'client.css' : '[name][extname]',
       },
     },
   },

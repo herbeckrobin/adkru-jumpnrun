@@ -89,11 +89,31 @@ add_shortcode('jumpnrun', static function (array|string $atts = []): string {
         'discount_code' => 'BURNERKING20',
     ], $atts, 'jumpnrun');
 
-    $config = [
+    $sprites = JUMPNRUN_URL . 'assets/sprites/';
+    $config  = [
         'width'        => (int) $atts['width'],
         'height'       => (int) $atts['height'],
         'discountCode' => (string) $atts['discount_code'],
-        // images: leave empty — plugin assets/sprites/ will be wired up in a later phase
+        'images'       => [
+            'bg-0'        => $sprites . 'bg-0.png',
+            'bg-1'        => $sprites . 'bg-1.png',
+            'bg-2'        => $sprites . 'bg-2.png',
+            'bg-3'        => $sprites . 'bg-3.png',
+            'bg-4'        => $sprites . 'bg-4.png',
+            'bg-5'        => $sprites . 'bg-5.png',
+            'bg-6'        => $sprites . 'bg-6.png',
+            'bg-7'        => $sprites . 'bg-7.png',
+            'bg-8'        => $sprites . 'bg-8.png',
+            'bg-9'        => $sprites . 'bg-9.png',
+            'player-idle' => $sprites . 'player-idle.png',
+            'player-jump' => $sprites . 'player-jump.png',
+            'obstacle-0'  => $sprites . 'obstacle-0.png',
+            'obstacle-1'  => $sprites . 'obstacle-1.png',
+            'obstacle-2'  => $sprites . 'obstacle-2.png',
+            'coin'        => $sprites . 'coin.png',
+            'platform-0'  => $sprites . 'platform-0.png',
+            'platform-1'  => $sprites . 'platform-1.png',
+        ],
     ];
 
     $json   = wp_json_encode($config, JSON_HEX_TAG | JSON_HEX_AMP);

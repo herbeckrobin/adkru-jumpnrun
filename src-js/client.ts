@@ -148,7 +148,7 @@ class GameUI {
 
 // ── Bootstrap ─────────────────────────────────────────────────────────────
 
-export async function bootstrap(root: HTMLElement, rawConfig: JumpnrunConfig = {}): Promise<void> {
+export function bootstrap(root: HTMLElement, rawConfig: JumpnrunConfig = {}): void {
   if (root.dataset.jnrBooted) return;
   root.dataset.jnrBooted = '1';
 
@@ -160,8 +160,15 @@ export async function bootstrap(root: HTMLElement, rawConfig: JumpnrunConfig = {
 
   const ui = new GameUI(root, engineCfg.canvasWidth, engineCfg.canvasHeight);
 
-  // Load sprites — non-blocking, game works fine with fallback colors
-  const images: ImageMap = rawConfig.images ? await loadImages(rawConfig.images) : new Map();
+  // Start loading sprites non-blocking — game shows start screen immediately.
+  // The closure in the render loop captures the `images` variable by reference,
+  // so reassigning it when the promise resolves is picked up on the next frame.
+  let images: ImageMap = new Map();
+  if (rawConfig.images) {
+    loadImages(rawConfig.images).then((loaded) => {
+      images = loaded;
+    });
+  }
 
   const ctx = ui.canvas.getContext('2d');
   if (!ctx) {
@@ -220,14 +227,14 @@ export async function bootstrap(root: HTMLElement, rawConfig: JumpnrunConfig = {
 declare global {
   interface Window {
     JumpnrunConfig?: JumpnrunConfig;
-    Jumpnrun?: { bootstrap: typeof bootstrap };
+    Jumpnrun?: { bootstrap: (root: HTMLElement, config?: JumpnrunConfig) => void };
   }
 }
 
 function autoInit(): void {
   const root = document.getElementById('jumpnrun-root');
   if (root) {
-    bootstrap(root, window.JumpnrunConfig ?? {}).catch(console.error);
+    bootstrap(root, window.JumpnrunConfig ?? {});
   }
   window.Jumpnrun = { bootstrap };
 }

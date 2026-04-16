@@ -4,8 +4,8 @@ import { defineConfig } from 'vite';
 // Dev-Server fuer die Standalone-Demo (ohne WordPress)
 export default defineConfig({
   root: resolve(__dirname),
-  // Serve legacy/images/ as static files: /carry/logo-1.png, /coin/coin.png, etc.
-  publicDir: resolve(__dirname, '..', 'legacy', 'images'),
+  // Serve assets/sprites/ as static files at root: /bg-0.png, /player-idle.png etc.
+  publicDir: resolve(__dirname, '..', 'assets', 'sprites'),
   resolve: {
     alias: {
       '@engine': resolve(__dirname, '..', 'src-js', 'engine'),

@@ -20,8 +20,8 @@ export async function loadImages(entries: Record<string, string>): Promise<Image
     Object.entries(entries).map(async ([key, url]) => {
       try {
         map.set(key, await loadImage(url));
-      } catch {
-        // silently ignored — renderer uses fallback color
+      } catch (err) {
+        console.warn(`[jumpnrun] Sprite nicht geladen: ${key} → ${url}`, err);
       }
     }),
   );
