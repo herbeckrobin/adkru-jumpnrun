@@ -1,0 +1,525 @@
+body {
+  margin: 0;
+  overflow: hidden;
+  font-family: Arial, sans-serif;
+  background-color: black;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  position: relative;
+}
+
+
+
+canvas {
+  display: block;
+  margin: 0 auto;
+  max-width: 1000px;
+  max-height: 80vh;
+  width: auto;
+  height: auto;
+  touch-action: manipulation;
+  box-sizing: border-box;
+}
+
+#jumpButton {
+  display: none;
+}
+
+#overlay,
+#gameOverOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
+  text-align: center;
+  color: white;
+  z-index: 100;
+  gap: 20px;
+}
+
+
+#close {
+  position: absolute;
+  top: 20px;               /* leicht über dem Highscore Panel */
+  right: 15px;             /* gleiche Ausrichtung wie das Panel */
+  font-size: 24px;
+  color: white;
+  text-decoration: none;
+  font-weight: bold;
+  background: rgba(0,0,0,0.5);  /* optional, leichter Hintergrund für Lesbarkeit */
+  padding: 5px 10px;
+  border-radius: 5px;
+  z-index: 1600;            /* über dem Highscore Panel */
+  cursor: pointer;
+  transition: background 0.3s, color 0.3s;
+}
+
+#close:hover {
+  background: rgba(255,0,0,0.8);
+  color: white;
+}
+
+
+
+/* --- Neues Highscore Board --- */
+#highscorePanel {
+  position: absolute;
+  top: 80px;   /* Abstand vom oberen Rand */
+  right: 10px; /* rechtsbündig */
+  width: 260px;
+  background: rgba(0, 0, 0, 0.8);
+  color: white;
+  padding: 15px;
+  border-radius: 12px;
+  font-family: Arial, sans-serif;
+  box-shadow: 0 0 15px rgba(0,0,0,0.5);
+  z-index: 1500;
+  max-height: 80vh;
+  text-align: center; /* Überschrift zentriert */
+}
+#werbefeldlinks {
+  position: absolute;
+  top: 80px;              /* Gleicher Abstand wie Highscore */
+  left: 10px;             /* Links neben dem Spielfeld */
+  width: 260px;
+  height: 600px;          /* gleiche Höhe wie dein Spiel */
+  background-image: url('http://localhost:8888/images/werbung/images.jpeg'); /* <-- hier dein Bildpfad */
+  background-size: cover; /* Bild füllt den Container vollständig */
+  background-position: center; /* mittig ausgerichtet */
+  background-repeat: no-repeat; /* kein Wiederholen des Bildes */
+  border-radius: 12px;
+  box-shadow: 0 0 15px rgba(0,0,0,0.5);
+  font-family: Arial, sans-serif;
+  color: white;
+  text-align: center;
+  padding: 15px;
+  z-index: 1500;
+  overflow: hidden;
+}
+
+/* --- Werbefeld rechts unter Highscoreliste--- */
+
+#werbefeldrechts {
+  position: absolute;
+  bottom: 20px;             
+  right: 10px;              
+  width: 260px;
+  height: 250px;            
+  background-image: url('http://localhost:8888/images/werbung/waage.jpg');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  border-radius: 12px;
+  box-shadow: 0 0 15px rgba(0,0,0,0.5);
+  font-family: Arial, sans-serif;
+  color: rgb(0, 0, 0);
+  text-align: center;
+  padding: 15px;
+  z-index: 1500;
+  overflow: hidden;
+}
+
+/* Sponsor-Titel */
+#werbefeldrechts #sponsor-title {
+  background: rgba(0,0,0,0.5);   /* transparenter Hintergrund */
+  color: white;
+  padding: 5px 10px;
+  border-radius: 5px;
+  display: inline-block;
+  margin-bottom: 5px;
+}
+
+/* Sponsor-Text */
+#werbefeldrechts #sponsor-text {
+  background: rgba(0,0,0,0.4);
+  color: white;
+  padding: 4px 8px;
+  border-radius: 5px;
+  display: inline-block;
+  font-size: 14px;
+  margin-bottom: 10px;
+}
+
+/* Link */
+#werbefeldrechts #werbelink {
+  position: absolute;
+  bottom: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  color: white;
+  font-weight: bold;
+  font-size: 18px;
+  text-decoration: none;
+  background: rgba(0,0,0,0.5);
+  padding: 5px 10px;
+  border-radius: 5px;
+}
+#werbefeldrechts #werbelink:hover {
+  background: rgba(0,0,0,0.7);
+  color: #ffdf00;
+}
+
+
+
+
+
+
+
+
+
+
+#highscorePanel h3 {
+  margin-top: 0;
+  margin-bottom: 15px;
+  color: #ffcc00; /* gelbe Überschrift */
+  font-size: 18px;
+}
+
+#highscorePanel ol {
+  list-style: none; /* Nummerierung über JS */
+  padding: 0;
+  margin: 0;
+}
+
+#highscorePanel li {
+  display: flex;
+  justify-content: space-between; /* Name links, Punktzahl rechts */
+  padding: 4px 8px;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+  color: white;
+  font-size: 16px;
+}
+
+#highscorePanel li .rank {
+  margin-right: 8px;
+  font-weight: bold;
+  color: #ffcc00;
+}
+
+#highscorePanel li .name {
+  flex-grow: 1;
+  text-align: left;
+}
+
+#highscorePanel li .score {
+  margin-left: auto;
+  font-weight: bold;
+}
+
+#highscorePanel li:first-child .rank,
+#highscorePanel li:first-child .name,
+#highscorePanel li:first-child .score {
+  color: #218838;
+  font-weight: bold;
+}
+
+/* Game Over */
+#gameOverText {
+  font-size: 48px;
+  margin-bottom: 40px;
+  overflow: hidden;
+  white-space: nowrap;
+  border-right: 3px solid white;
+  width: 0;
+  animation: typeWriter 2.4s steps(10, end) forwards;
+  position: relative;
+}
+
+#gameOverText::after {
+  content: '|';
+  position: absolute;
+  right: -10px;
+  animation: blink 1s infinite step-start;
+}
+
+#gameOverContent {
+  opacity: 0;
+  transform: translateY(20px);
+  animation: fadeInUp 1s ease-out 2.4s forwards;
+}
+
+#overlay h2 {
+  font-size: 48px;
+  margin-bottom: 90px;
+}
+
+#overlay h3,
+#gameOverOverlay h3 {
+  font-size: 20px;
+  margin-bottom: 0;
+  color: white;
+  position: relative;
+}
+
+#overlay label,
+#gameOverOverlay p {
+  font-size: 30px;
+  margin-bottom: 20px;
+}
+
+#gameOverOverlay p {
+  max-width: 80vw;
+  white-space: normal;
+  word-wrap: break-word;
+  margin-left: auto;
+  margin-right: auto;
+  text-align: center;
+}
+
+#overlay input {
+  font-size: 24px;
+  padding: 10px;
+  border: none;
+  border-radius: 5px;
+  margin-bottom: 20px;
+  text-align: center;
+  width: 300px;
+  max-width: 80vw;
+}
+
+#overlay button,
+#gameOverOverlay button,
+#restartButton {
+  background-color: #28a745;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  font-size: 18px;
+  border-radius: 5px;
+  cursor: pointer;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+  display: inline-block;
+  animation: pulseJumpButton 1.6s infinite ease-in-out;
+}
+
+#overlay button:hover,
+#gameOverOverlay button:hover,
+#restartButton:hover {
+  background-color: #218838;
+}
+
+#restartButton {
+  display: none;
+  margin-top: 20px;
+  z-index: 15;
+}
+
+.hidden {
+  opacity: 0;
+  pointer-events: none;
+  visibility: hidden;
+  transition: opacity 0.3s ease;
+}
+
+/* Mobile Styles */
+
+
+
+@media (max-width: 768px) {
+  canvas {
+    max-height: 80vh;
+    max-width: 90vw;
+    margin-top: 80px;
+    margin-bottom: 200px;
+  }
+
+  #jumpButton {
+    display: inline-block;
+    position: fixed;
+    bottom: 15px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 18px;
+    padding: 10px 20px;
+    border-radius: 5px;
+    background-color: #28a745;
+    color: white;
+    border: none;
+    cursor: pointer;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+    z-index: 60;
+    transition: background-color 0.3s ease;
+  }
+
+  #jumpButton:hover {
+    background-color: #218838;
+  }
+
+  #restartButton {
+    margin-top: 20px;
+    display: inline-block;
+  }
+
+  #overlay h2,
+  #gameOverOverlay h2 {
+    font-size: 32px;
+    margin-bottom: 40px;
+  }
+
+  #overlay input {
+    width: 80%;
+    font-size: 20px;
+  }
+}
+
+/* Dreifach-Blink-Animation für Touch-Hinweis */
+@keyframes touchHintBlinkTriple {
+  0%, 22%, 44%, 60%, 100% { opacity: 0; transform: translateX(-50%) scale(0.8); }
+  5.5%, 27.5%, 49.5% { opacity: 1; transform: translateX(-50%) scale(1); }
+  16.5%, 38.5% { opacity: 0; transform: translateX(-50%) scale(0.8); }
+}
+
+#touchHint {
+  display: none;
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%) scale(0.8);
+  background: rgba(0, 0, 0, 0.7);
+  color: white;
+  padding: 12px 24px;
+  border-radius: 12px;
+  font-size: 20px;
+  font-weight: bold;
+  z-index: 1100;
+  user-select: none;
+  text-align: center;
+  pointer-events: none;
+  font-family: Arial, sans-serif;
+  opacity: 0;
+  transition: opacity 0.5s ease, transform 0.5s ease;
+}
+
+#touchHint.visible {
+  display: block;
+  animation: touchHintBlinkTriple 9s ease-in-out infinite;
+}
+
+/* Start/Restart Buttons Animation */
+@keyframes pulseJumpButton {
+  0% { transform: scale(1); box-shadow: 0 0 10px rgba(40, 167, 69, 0.6); }
+  50% { transform: scale(1.1); box-shadow: 0 0 20px rgba(40, 167, 69, 0.9); }
+  100% { transform: scale(1); box-shadow: 0 0 10px rgba(40, 167, 69, 0.6); }
+}
+
+/* Schreibmaschinen-Effekt */
+@keyframes typeWriter { from { width: 0; } to { width: 10ch; } }
+@keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+@keyframes fadeInUp { to { opacity: 1; transform: translateY(0); } }
+
+/* Landscape Mobile */
+@media (max-width: 768px) and (orientation: landscape) {
+  body { height: 100vh; justify-content: flex-start; padding: 3px 0; overflow: hidden; }
+  canvas { max-height: 30vh !important; max-width: 90vw !important; margin-top: 3px !important; }
+  #jumpButton { bottom: 12px !important; font-size: 12px !important; padding: 4px 10px !important; border-radius: 4px !important; }
+  #restartButton { position: fixed !important; bottom: 12px !important; left: 50%; transform: translateX(-50%) !important; font-size: 14px !important; padding: 6px 10px !important; border-radius: 4px !important; display: inline-block !important; z-index: 120 !important; }
+  #gameOverOverlay { align-items: flex-start !important; padding-top: 15px !important; padding-bottom: 60px !important; height: 100vh !important; overflow-y: auto !important; gap: 10px !important; }
+  #gameOverText { font-size: 18px !important; margin-bottom: 10px !important; white-space: normal !important; width: 85vw !important; text-align: center !important; border-right: none !important; line-height: 1.3 !important; }
+  #gameOverContent { transform: translateY(0) !important; animation: none !important; opacity: 1 !important; width: 85vw !important; font-size: 12px !important; margin-bottom: 8px !important; text-align: center !important; }
+}
+
+
+
+
+@media (max-width: 768px) {
+
+  /* Highscore über dem Canvas (nur Top 3) */
+/* Highscore unter dem Canvas (nur Top 3) */
+#highscorePanel {
+  position: relative;
+  width: 90%;
+  margin: 10px auto; /* direkt unter Canvas */
+  order: 1;           /* nach Canvas im Layoutfluss */
+  background: rgba(0, 0, 0, 0.85);
+  text-align: center;
+  z-index: 1200;
+  padding: 10px;
+  border-radius: 8px;
+}
+
+/* Nur die ersten 3 Highscores anzeigen */
+#highscorePanel ol li:nth-child(n+4) {
+  display: none;
+}
+
+
+  #highscorePanel li:nth-child(n+4) {
+    display: none; /* nur Top 3 */
+  }
+
+  /* Sponsor des Monats direkt unter Close-Button */
+  #werbefeldrechts {
+    position: relative;
+    width: 90%;
+    height: 60px;
+    margin: -300px auto 20px auto; /* rutscht 20px höher */
+    top: 0;
+    right: auto;
+    bottom: auto;
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    border-radius: 8px;
+    box-shadow: 0 0 8px rgba(0,0,0,0.4);
+    text-align: center;
+    order: -2; /* ganz oben im Layout */
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    z-index: 1900; /* über Canvas und Highscore */
+  }
+  
+
+  #werbefeldrechts #sponsor-title {
+    font-size: 14px;
+    background: rgba(0,0,0,0.5);
+    padding: 2px 6px;
+    border-radius: 4px;
+    margin-bottom: 2px;
+  }
+
+  #werbefeldrechts #sponsor-text {
+    display: none; /* optional: Text ausblenden für kompakter Banner */
+  }
+
+  #werbefeldrechts #werbelink {
+    display: none; /* Link ausblenden – oder klein anzeigen, wenn gewünscht */
+  }
+
+  /* Canvas */
+  canvas {
+    order: 0;
+    margin: 10px auto;
+    width: 95%;
+    max-height: 45vh;
+  }
+
+  /* Linke Werbung komplett ausblenden */
+  #werbefeldlinks {
+    display: none !important;
+  }
+
+  /* Close-Button fixiert oben */
+  #close {
+    position: fixed;
+    top: 10px;
+    right: 10px;
+    z-index: 2000;
+  }
+
+  /* Körperanordnung mobil */
+  body {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+}

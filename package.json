@@ -1,0 +1,38 @@
+{
+  "name": "adkru-jumpnrun",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "description": "Jump-and-Run WordPress-Plugin — White-Label Showcase fuer ADKRU",
+  "license": "GPL-2.0-or-later",
+  "author": "Robin Herbeck <maiaundrobin15102022@gmail.com>",
+  "repository": {
+    "type": "git",
+    "url": "git@github.com:herbeckrobin/adkru-jumpnrun.git"
+  },
+  "scripts": {
+    "dev": "vite --config demo/vite.config.ts",
+    "build": "vite build",
+    "typecheck": "tsc --noEmit",
+    "lint": "biome check .",
+    "format": "biome format --write .",
+    "test": "vitest run",
+    "test:e2e": "playwright test",
+    "package-plugin": "node scripts/package-plugin.mjs"
+  },
+  "dependencies": {
+    "zod": "3.24.2"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.2.0",
+    "@playwright/test": "1.50.1",
+    "@types/node": "^25.6.0",
+    "typescript": "5.7.3",
+    "vite": "6.0.7",
+    "vitest": "3.0.5"
+  },
+  "engines": {
+    "bun": ">=1.3",
+    "node": ">=22"
+  }
+}

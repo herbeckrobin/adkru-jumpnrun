@@ -1,0 +1,40 @@
+node_modules/
+dist/
+build/
+coverage/
+
+# Bun / npm
+*.log
+.npm/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Env / Secrets
+.env
+.env.local
+.env.*.local
+
+# PHP
+vendor/
+composer.lock
+
+# Plugin build artifacts (Vite-Output)
+assets/game/*.mjs
+assets/game/*.css
+assets/game/*.map
+
+# Release artifacts
+release/
+jumpnrun-*.zip
+
+# Playwright
+test-results/
+playwright-report/
+blob-report/

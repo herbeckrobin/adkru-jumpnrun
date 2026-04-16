@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Jump and Run Game</title>
+  <link rel="stylesheet" href="style.css" />
+
+  <style>
+    /* --- Bestehende Styles --- */
+    #levelHint {
+      display: none;
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      background: #000;
+      color: #fff;
+      text-align: center;
+      padding: 12px 0;
+      font-size: 20px;
+      z-index: 1000;
+      user-select: none;
+      font-family: Arial, sans-serif;
+    }
+
+    #touchHint {
+      display: none;
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0,0,0,0.7);
+      color: white;
+      padding: 12px 24px;
+      border-radius: 12px;
+      font-size: 20px;
+      font-weight: bold;
+      z-index: 1000;
+      user-select: none;
+      text-align: center;
+      pointer-events: none;
+      font-family: Arial, sans-serif;
+    }
+
+    #runnerImage {
+      width: 150px;
+      height: auto;
+      margin: 20px 0;
+    }
+
+    #gameOverText {
+      font-size: 48px;
+      color: red;
+      font-family: monospace;
+      white-space: nowrap;
+      overflow: hidden;
+      border-right: 3px solid #fff;
+      width: fit-content;
+      animation: blinkCursor 1s step-end infinite;
+      margin-bottom: 20px;
+      display: none;
+    }
+
+    @keyframes blinkCursor {
+      0%, 100% { border-color: transparent; }
+      50% { border-color: white; }
+    }
+
+    #gameOverDetails {
+      display: none;
+      text-align: center;
+      color: white;
+      font-size: 18px;
+      margin-top: 10px;
+    }
+
+    /* --- Neues Highscore Board --- */
+    #highscorePanel {
+      position: absolute;
+      top: 80px;
+      right: 15px;
+      width: 260px;
+      background: rgba(0, 0, 0, 0.8);
+      color: white;
+      padding: 15px;
+      border-radius: 12px;
+      font-family: Arial, sans-serif;
+      box-shadow: 0 0 15px rgba(0,0,0,0.5);
+      z-index: 1500;
+      overflow-y: auto;
+      max-height: 80vh;
+    }
+
+    #highscorePanel h3 {
+      text-align: center;
+      margin-top: 0;
+      margin-bottom: 10px;
+      color: #ffffff;
+      font-size: 18px;
+    }
+
+    #highscorePanel ol {
+  list-style: none;  /* Browser-Punkte aus */
+  padding: 0;
+  margin: 0;
+  font-size: 16px;
+}
+
+
+    #highscorePanel li {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin: 4px 0;
+      padding: 4px 8px;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+      color: white;
+    }
+
+    #highscorePanel li .rank {
+      font-weight: bold;
+      margin-right: 10px;
+      color: #ffffff;
+      min-width: 20px;
+    }
+
+    #highscorePanel li .name {
+      flex: 1;
+      text-align: left;
+    }
+
+    #highscorePanel li .score {
+      text-align: right;
+      min-width: 60px;
+    }
+
+    /* Mobile Optimierung */
+    @media (max-width: 600px) {
+      #highscorePanel {
+        width: 90%;
+        left: 50%;
+        transform: translateX(-50%);
+        top: auto;
+        bottom: 10px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- Start-Overlay -->
+  <div id="overlay">
+    <h2>Willkommen zum Spiel!</h2>
+    <label for="playerName">Spielername:</label>
+    <input type="text" id="playerName" maxlength="15" />
+    <button id="startButton">Start</button>
+    <p id="controlHint">Leertaste = Sprung (Doppelsprung möglich, nötig ;))</p>
+  </div>
+
+  <!-- Spielfeld -->
+  <canvas id="gameCanvas" width="800" height="600" tabindex="1"></canvas>
+
+  <div id="levelHint">Level gewechselt!</div>
+  <div id="touchHint">Tippe den Bildschirm, um zu springen!</div>
+
+  <!-- Rabatt-Popup -->
+  <div id="discountPopup" style="display:none; position:fixed; top:50%; left:50%; transform: translate(-50%, -50%);
+    background:#222; color:#fff; padding:20px; border-radius:10px; box-shadow: 0 0 10px #000; z-index:1000; text-align:center;">
+    <h2>Glückwunsch!</h2>
+    <p>Du hast das Game gerockt! Hier ist dein 20% Rabattcode:</p>
+    <strong>BURNERKING20</strong>
+    <br><br>
+    <button id="closeDiscountPopup">Schließen</button>
+  </div>
+
+
+  
+  <a id="close" href="https://deine-homepage.de" target="_blank">Get Back ✖</a>
+
+
+
+
+
+  
+  <!-- Highscore-Panel -->
+  <div id="highscorePanel">
+    <h3>🏆 Top 10 Highscores 🏆</h3>
+    <div id="highscoreList">
+      <p style="text-align:center; color:#aaa;">Wird geladen...</p>
+    </div>
+  </div>
+
+   <!-- Werbung Links -->
+   <div id="werbefeldlinks">
+    <h3>🏆 Hier könnte Ihre Werbung stehen 🏆</h3>
+
+
+  
+
+
+
+    
+    </div>
+  </div>
+
+<!-- Werbung Rechts -->
+<div id="werbefeldrechts">
+  <h3 id="sponsor-title">🏆 Sponsor des Monats 🏆</h3>
+  <p id="sponsor-text">Mit freundlicher Unterstützung von Mister X</p>
+  <a id="werbelink" href="https://example.com" target="_blank">Mehr erfahren</a>
+</div>
+
+
+
+  <!-- Game Over Overlay -->
+  <div id="gameOverOverlay" class="hidden" style="position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.85); color: white; display:flex; flex-direction: column; align-items:center; justify-content:center; z-index: 2000;">
+    
+    <h2 id="gameOverText"></h2>
+    
+    <div id="gameOverDetails">
+      <img id="runnerImage" src="http://localhost:8888/images/carry/logo-1.png" alt="Laufendes Männchen" />
+      <p>Highscore: <span id="finalHighscoreText">0</span></p>
+      <h3>Du hast das Spiel verloren!<br />Möchtest du nochmal spielen?</h3>
+    </div>
+
+    <button id="restartButton" style="display:none;">Restart</button>
+  </div>
+
+  <div id="mobileControls">
+    <button id="jumpButton" style="display:none;">Jump</button>
+  </div>
+
+  <!-- Skripte -->
+  <script src="game.js"></script>
+  <script>
+    // Laufanimation im Game Over Screen
+    const runnerImage = document.getElementById('runnerImage');
+    const frame1 = 'http://localhost:8888/images/carry/logo-1.png';
+    const frame2 = 'http://localhost:8888/images/carry/logo-1-jumpneuneu.png';
+    let currentFrame = 0;
+
+    setInterval(() => {
+      const overlay = document.getElementById('gameOverOverlay');
+      if (!overlay.classList.contains('hidden')) {
+        runnerImage.src = currentFrame % 2 === 0 ? frame1 : frame2;
+        currentFrame++;
+      }
+    }, 200);
+
+    // Highscores beim Laden direkt anzeigen
+    window.addEventListener("DOMContentLoaded", () => {
+      if (typeof loadHighscores === "function") loadHighscores();
+    });
+
+    // --- Highscore Anzeige anpassen ---
+    function displayHighscores(highscores) {
+      const container = document.getElementById("highscoreList");
+      if (!container) return;
+
+      let html = "<ol>";
+      highscores.forEach((entry, index) => {
+        html += `<li>
+          <span class="rank">${index+1}.</span>
+          <span class="name">${entry.name}</span>
+          <span class="score">${entry.score}</span>
+        </li>`;
+      });
+      html += "</ol>";
+      container.innerHTML = html;
+    }
+  </script>
+</body>
+</html>
