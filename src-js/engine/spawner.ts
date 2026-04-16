@@ -5,8 +5,8 @@ export class Spawner {
   constructor(private readonly cfg: GameConfig) {}
 
   obstacle(_level: number): Obstacle {
-    const width = 110 + Math.random() * 50;
-    const height = 110 + Math.random() * 50;
+    const width = 60 + Math.random() * 50;
+    const height = 80 + Math.random() * 60;
     return {
       x: this.cfg.canvasWidth + 50,
       y: this.cfg.canvasHeight - this.cfg.groundOffset - height,
@@ -18,40 +18,41 @@ export class Spawner {
 
   obstacleDelay(level: number): number {
     const speed = this.cfg.baseSpeed + level * this.cfg.speedPerLevel;
-    const minTime = (300 / speed) * (1000 / 60); // ms to travel 300 px
-    return minTime + Math.random() * 1500;
+    const minTime = (220 / speed) * (1000 / 60); // ms to travel 220 px
+    return minTime + Math.random() * 1200;
   }
 
   coin(): Coin {
+    const groundY = this.cfg.canvasHeight - this.cfg.groundOffset;
     return {
-      x: this.cfg.canvasWidth + Math.random() * 300,
-      y: this.cfg.canvasHeight - 200 - Math.random() * 150,
-      width: 50,
-      height: 50,
+      x: this.cfg.canvasWidth + Math.random() * 250,
+      y: groundY - 80 - Math.random() * 180,
+      width: 32,
+      height: 32,
       collected: false,
     };
   }
 
   coinDelay(): number {
-    return 800 + Math.random() * 1500;
+    return 600 + Math.random() * 1200;
   }
 
   platforms(): Platform[] {
     return Array.from({ length: 4 }, (_, i) => ({
-      x: this.cfg.canvasWidth + i * 1400,
-      y: this.cfg.canvasHeight - 200 - Math.random() * 200,
-      width: 80,
-      height: 20,
+      x: this.cfg.canvasWidth + i * 1200,
+      y: this.cfg.canvasHeight - 180 - Math.random() * 180,
+      width: 120,
+      height: 18,
       imageKey: `platform-${i % 2}`,
     }));
   }
 
   platformCoin(platform: Platform): Coin {
     return {
-      x: platform.x + 50,
-      y: platform.y - 40,
-      width: 50,
-      height: 50,
+      x: platform.x + platform.width / 2 - 16,
+      y: platform.y - 48,
+      width: 32,
+      height: 32,
       collected: false,
     };
   }

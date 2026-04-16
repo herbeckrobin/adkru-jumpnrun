@@ -24,12 +24,16 @@ class GameUI {
   private readonly startBtn: HTMLElement;
 
   private readonly gameOverOverlay: HTMLElement;
+  private readonly gameOverTitle: HTMLElement;
+  private readonly scoreLabel: HTMLElement;
   private readonly scoreDisplay: HTMLElement;
   private readonly restartBtn: HTMLElement;
 
   private readonly discountPopup: HTMLElement;
   private readonly discountCodeEl: HTMLElement;
   private readonly closeDiscountBtn: HTMLElement;
+
+  private _playerName = 'Spieler';
 
   constructor(root: HTMLElement, width: number, height: number) {
     // Wrapper keeps overlays positioned over the canvas
@@ -46,24 +50,40 @@ class GameUI {
     this.nameInput = document.createElement('input');
     this.nameInput.type = 'text';
     this.nameInput.maxLength = 15;
-    this.nameInput.placeholder = 'Dein Name (max. 15 Zeichen)';
+    this.nameInput.placeholder = 'Dein Name (optional)';
     this.nameInput.className = 'jnr-input';
+    this.nameInput.autocomplete = 'off';
     this.startBtn = el('button', 'jnr-btn', 'Spiel starten');
+
+    const hr = document.createElement('hr');
+    hr.className = 'jnr-divider';
+
     this.startOverlay.append(
       el('h2', 'jnr-title', 'Jump & Run'),
-      el('p', 'jnr-subtitle', 'Leertaste · Klick · Touch → Springen'),
+      el('p', 'jnr-subtitle', 'Leertaste · Klick · Touch — Doppelsprung möglich'),
+      hr,
       this.nameInput,
       this.startBtn,
     );
 
     // ── Game-over overlay ─────────────────────────────────────────────────
     this.gameOverOverlay = overlay(wrap, 'jnr-gameover jnr-hidden');
-    this.scoreDisplay = el('p', 'jnr-score-display', '');
+    this.gameOverTitle = el('h2', 'jnr-title', 'Game Over');
+    this.scoreLabel = el('p', 'jnr-score-label', 'Dein Score');
+    this.scoreDisplay = el('p', 'jnr-score-display', '0');
     this.restartBtn = el('button', 'jnr-btn', 'Nochmal spielen');
+    const restartSecondary = el('button', 'jnr-btn jnr-btn-secondary', 'Zur Startseite');
+    restartSecondary.onclick = () => {
+      this.gameOverOverlay.classList.add('jnr-hidden');
+      this.startOverlay.classList.remove('jnr-hidden');
+    };
+
     this.gameOverOverlay.append(
-      el('h2', 'jnr-title', 'Game Over'),
+      this.gameOverTitle,
+      this.scoreLabel,
       this.scoreDisplay,
       this.restartBtn,
+      restartSecondary,
     );
 
     // ── Discount popup ────────────────────────────────────────────────────
@@ -71,9 +91,10 @@ class GameUI {
     this.discountCodeEl = el('span', 'jnr-code', '');
     this.closeDiscountBtn = el('button', 'jnr-btn', 'Weiterspielen');
     this.discountPopup.append(
-      el('h2', 'jnr-title', '🎉 Bonus-Level!'),
-      el('p', 'jnr-subtitle', 'Dein Rabattcode:'),
+      el('h2', 'jnr-title', 'Bonus freigeschaltet!'),
+      el('p', 'jnr-subtitle', 'Dein persönlicher Rabattcode:'),
       this.discountCodeEl,
+      el('p', 'jnr-subtitle', 'Code kopieren und beim Checkout einlösen.'),
       this.closeDiscountBtn,
     );
   }
@@ -90,9 +111,9 @@ class GameUI {
     this.nameInput.focus();
 
     const go = (): void => {
-      const name = this.playerName || 'Spieler';
+      this._playerName = this.playerName || 'Spieler';
       this.startOverlay.classList.add('jnr-hidden');
-      onStart(name);
+      onStart(this._playerName);
     };
     this.startBtn.onclick = go;
     this.nameInput.onkeydown = (e) => {
@@ -104,7 +125,10 @@ class GameUI {
   }
 
   showGameOver(score: number, onRestart: () => void): void {
-    this.scoreDisplay.textContent = `Score: ${score}`;
+    this.gameOverTitle.textContent =
+      score > 20 ? 'Stark!' : score > 10 ? 'Gut gespielt!' : 'Game Over';
+    this.scoreLabel.textContent = `${this._playerName} · Dein Score`;
+    this.scoreDisplay.textContent = String(score);
     this.gameOverOverlay.classList.remove('jnr-hidden');
     this.restartBtn.onclick = () => {
       this.gameOverOverlay.classList.add('jnr-hidden');

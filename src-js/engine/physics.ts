@@ -9,13 +9,13 @@ function rectsOverlap(a: Rect, b: Rect, paddingX: number, paddingY: number): boo
   );
 }
 
-/** Shrunken hitbox (80 px horizontal, 20 px vertical) to match legacy feel */
+/** Shrunken hitbox — forgiving margins so near-misses feel fair */
 export function playerHitsObstacle(player: Rect, obstacle: Rect): boolean {
-  return rectsOverlap(player, obstacle, 80, 20);
+  return rectsOverlap(player, obstacle, 12, 8);
 }
 
 export function playerHitsCoin(player: Rect, coin: Rect): boolean {
-  return rectsOverlap(player, coin, 40, 10);
+  return rectsOverlap(player, coin, 6, 4);
 }
 
 export function playerLandsOnPlatform(player: Rect, velocityY: number, platform: Rect): boolean {
