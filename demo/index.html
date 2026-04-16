@@ -3,19 +3,30 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>adkru-jumpnrun — Demo</title>
+    <title>Jump-n-Run — Demo</title>
     <style>
-      body { margin: 0; font-family: system-ui, sans-serif; background: #111; color: #eee; }
-      main { max-width: 960px; margin: 2rem auto; padding: 1rem; }
-      canvas { display: block; width: 100%; max-width: 960px; background: #222; border-radius: 8px; }
+      *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+      body {
+        background: #111;
+        color: #eee;
+        font-family: system-ui, -apple-system, sans-serif;
+        min-height: 100dvh;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 0.75rem;
+        padding: 1rem;
+      }
+      h1 { font-size: 0.9rem; color: #4fc3f7; letter-spacing: 0.05em; }
+      #jumpnrun-root { width: 100%; max-width: 960px; }
+      p.hint { font-size: 0.78rem; color: #555; }
     </style>
   </head>
   <body>
-    <main>
-      <h1>adkru-jumpnrun — Standalone-Demo</h1>
-      <p>Diese Seite laedt Engine + Renderer ohne WordPress. Noch kein Spiel, nur Skelett.</p>
-      <canvas id="game" width="960" height="540"></canvas>
-    </main>
+    <h1>adkru-jumpnrun · Standalone-Demo</h1>
+    <div id="jumpnrun-root"></div>
+    <p class="hint">Leertaste · Klick · Touch → Springen &nbsp;|&nbsp; Doppelsprung möglich</p>
     <script type="module" src="./src/main.ts"></script>
   </body>
 </html>

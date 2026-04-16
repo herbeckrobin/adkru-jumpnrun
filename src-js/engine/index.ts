@@ -1,8 +1,7 @@
 export * from './config/index.ts';
 export * from './events/index.ts';
+export { GameLoop } from './loop.ts';
+export * from './types.ts';
+export { GameWorld } from './world.ts';
 
-export const ENGINE_VERSION = '0.0.1';
-
-export function hello(): string {
-  return 'adkru-jumpnrun engine ready';
-}
+export const ENGINE_VERSION = '0.1.0';

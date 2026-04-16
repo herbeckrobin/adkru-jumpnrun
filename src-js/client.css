@@ -1,0 +1,116 @@
+/* Jump-n-Run plugin styles — all classes prefixed jnr- */
+
+.jnr-wrap {
+  position: relative;
+  display: block;
+  line-height: 0; /* collapse whitespace around canvas */
+}
+
+.jnr-wrap canvas {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 6px;
+}
+
+/* ── Overlays ──────────────────────────────────────────────────────────── */
+
+.jnr-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  background: rgba(0, 0, 0, 0.78);
+  color: #fff;
+  font-family: system-ui, -apple-system, sans-serif;
+  border-radius: 6px;
+  z-index: 10;
+  padding: 2rem 1rem;
+}
+
+.jnr-hidden {
+  display: none !important;
+}
+
+/* ── Typography ────────────────────────────────────────────────────────── */
+
+.jnr-title {
+  margin: 0;
+  font-size: clamp(1.6rem, 5vw, 2.8rem);
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.6);
+}
+
+.jnr-subtitle {
+  margin: 0;
+  font-size: 0.95rem;
+  color: rgba(255, 255, 255, 0.65);
+  text-align: center;
+}
+
+.jnr-score-display {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #ffd54f;
+  margin: 0;
+}
+
+/* ── Input ─────────────────────────────────────────────────────────────── */
+
+.jnr-input {
+  padding: 0.65rem 1.1rem;
+  font-size: 1rem;
+  border: 2px solid #4fc3f7;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  outline: none;
+  text-align: center;
+  width: min(300px, 85%);
+  transition: border-color 0.15s;
+}
+.jnr-input::placeholder {
+  color: rgba(255, 255, 255, 0.4);
+}
+.jnr-input:focus {
+  border-color: #81d4fa;
+}
+
+/* ── Button ────────────────────────────────────────────────────────────── */
+
+.jnr-btn {
+  padding: 0.7rem 2.2rem;
+  font-size: 1.05rem;
+  font-weight: 700;
+  background: #4fc3f7;
+  color: #000;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.15s, transform 0.1s;
+  white-space: nowrap;
+}
+.jnr-btn:hover {
+  background: #81d4fa;
+}
+.jnr-btn:active {
+  transform: scale(0.95);
+}
+
+/* ── Discount popup extras ─────────────────────────────────────────────── */
+
+.jnr-code {
+  display: inline-block;
+  padding: 0.5rem 1.8rem;
+  background: #ffd54f;
+  color: #000;
+  font-size: clamp(1.2rem, 4vw, 2rem);
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  border-radius: 6px;
+  margin: 0.25rem 0;
+}
