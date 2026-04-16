@@ -61,11 +61,7 @@ function masksOverlap(a: Maskable, b: Maskable): boolean {
  * Player vs. obstacle. Broadphase: AABB with `buffer` px inset on both rects
  * (forgiving). Narrowphase: per-pixel mask overlap if both sprites have masks.
  */
-export function playerHitsObstacle(
-  player: Maskable,
-  obstacle: Maskable,
-  buffer: number,
-): boolean {
+export function playerHitsObstacle(player: Maskable, obstacle: Maskable, buffer: number): boolean {
   const p: Maskable = { ...fitRect(player, player.mask), mask: player.mask };
   const o: Maskable = { ...fitRect(obstacle, obstacle.mask), mask: obstacle.mask };
   if (!aabbOverlap(p, o, buffer, buffer)) return false;

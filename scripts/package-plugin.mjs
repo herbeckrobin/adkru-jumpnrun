@@ -51,9 +51,9 @@ if (!existsSync(join(stage, 'vendor'))) {
   );
 }
 
-if (!existsSync(join(stage, 'assets', 'game', 'client.mjs'))) {
+if (!existsSync(join(stage, 'assets', 'game', 'client.js'))) {
   console.warn(
-    'Warnung: assets/game/client.mjs fehlt — bitte `bun run build` vor dem Packaging laufen lassen.',
+    'Warnung: assets/game/client.js fehlt — bitte `bun run build` vor dem Packaging laufen lassen.',
   );
 }
 

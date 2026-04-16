@@ -12,7 +12,7 @@ export default defineConfig({
       entry: resolve(__dirname, 'src-js/client.ts'),
       name: 'Jumpnrun',
       formats: ['es'],
-      fileName: () => 'client.mjs',
+      fileName: () => 'client.js',
     },
     rollupOptions: {
       output: {

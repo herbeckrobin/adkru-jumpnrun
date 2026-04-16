@@ -69,6 +69,8 @@ export class Spawner {
 
   playerMask(): SpriteMask | undefined {
     // Accept several key conventions so WP-side sprite naming stays flexible.
-    return this.masks.get('player') ?? this.masks.get('player-idle') ?? this.masks.get('player-jump');
+    return (
+      this.masks.get('player') ?? this.masks.get('player-idle') ?? this.masks.get('player-jump')
+    );
   }
 }

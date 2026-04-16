@@ -3,7 +3,7 @@
  * Plugin Name:       Jump-n-Run by ADKRU
  * Plugin URI:        https://github.com/herbeckrobin/adkru-jumpnrun
  * Description:       Jump-and-Run-Spiel als Shortcode fuer WordPress. Von Robin Herbeck fuer ADKRU.
- * Version:           0.1.0
+ * Version:           0.1.1
  * Requires at least: 6.5
  * Requires PHP:      8.2
  * Author:            Robin Herbeck
@@ -19,7 +19,7 @@ declare(strict_types=1);
 
 defined('ABSPATH') || exit;
 
-define('JUMPNRUN_VERSION', '0.1.0');
+define('JUMPNRUN_VERSION', '0.1.1');
 define('JUMPNRUN_FILE', __FILE__);
 define('JUMPNRUN_DIR', plugin_dir_path(__FILE__));
 define('JUMPNRUN_URL', plugin_dir_url(__FILE__));
@@ -58,7 +58,7 @@ add_action('wp_enqueue_scripts', static function (): void {
         return;
     }
 
-    $script_url = JUMPNRUN_URL . 'assets/game/client.mjs';
+    $script_url = JUMPNRUN_URL . 'assets/game/client.js';
     $css_url    = JUMPNRUN_URL . 'assets/game/client.css';
 
     // wp_enqueue_script_module loads <script type="module"> natively (WP 6.5+)

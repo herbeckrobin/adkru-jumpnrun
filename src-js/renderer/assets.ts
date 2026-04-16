@@ -48,10 +48,7 @@ function buildMask(img: HTMLImageElement): SpriteMask | null {
   try {
     data = ctx.getImageData(0, 0, w, h).data;
   } catch (err) {
-    console.warn(
-      `[jumpnrun] Mask-Build fehlgeschlagen (Canvas tainted? CORS?): ${img.src}`,
-      err,
-    );
+    console.warn(`[jumpnrun] Mask-Build fehlgeschlagen (Canvas tainted? CORS?): ${img.src}`, err);
     return null;
   }
 
@@ -109,9 +106,8 @@ export async function loadImages(
       }
     }),
   );
-  console.info(
-    `[jumpnrun] Sprites geladen: ${images.size} | Masken gebaut: ${masks.size}`,
-    { maskKeys: Array.from(masks.keys()) },
-  );
+  console.info(`[jumpnrun] Sprites geladen: ${images.size} | Masken gebaut: ${masks.size}`, {
+    maskKeys: Array.from(masks.keys()),
+  });
   return { images, masks };
 }
