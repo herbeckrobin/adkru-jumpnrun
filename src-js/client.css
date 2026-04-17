@@ -64,6 +64,13 @@
   letter-spacing: 0.03em;
 }
 
+.jnr-score-group {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+}
+
 .jnr-score-display {
   font-size: 2.2rem;
   font-weight: 900;
@@ -71,6 +78,7 @@
   margin: 0;
   letter-spacing: 0.02em;
   text-shadow: 0 0 20px rgba(255, 213, 79, 0.4);
+  line-height: 1;
 }
 
 .jnr-score-label {
@@ -79,6 +87,7 @@
   color: rgba(255, 255, 255, 0.45);
   text-transform: uppercase;
   letter-spacing: 0.1em;
+  line-height: 1;
 }
 
 /* ── Divider ────────────────────────────────────────────────────────────── */
@@ -121,7 +130,8 @@
 /* ── Button ────────────────────────────────────────────────────────────── */
 
 .jnr-btn {
-  padding: 0.75rem 2.4rem;
+  padding: 0.75rem 1.5rem;
+  width: min(260px, 85%);
   font-size: 1rem;
   font-weight: 700;
   background: linear-gradient(135deg, #4fc3f7, #0288d1);
@@ -152,6 +162,7 @@
   border: 1.5px solid rgba(255, 255, 255, 0.2);
   box-shadow: none;
   color: rgba(255, 255, 255, 0.8);
+  font-weight: 600;
 }
 
 .jnr-btn-secondary:hover {
@@ -159,20 +170,31 @@
   filter: none;
 }
 
+/* Zwei aufeinanderfolgende Buttons ruecken naeher zusammen — wirken als Gruppe. */
+.jnr-btn + .jnr-btn {
+  margin-top: -0.4rem;
+}
+
 /* ── Discount popup extras ─────────────────────────────────────────────── */
 
 .jnr-code {
   display: inline-block;
-  padding: 0.6rem 2rem;
+  padding: 0.75rem 1.75rem;
   background: linear-gradient(135deg, #ffd54f, #ffb300);
   color: #1a1200;
-  font-size: clamp(1.3rem, 4vw, 2.2rem);
-  font-weight: 900;
-  letter-spacing: 0.14em;
-  border-radius: 8px;
-  margin: 0.25rem 0;
-  box-shadow: 0 4px 20px rgba(255, 213, 79, 0.35);
-  font-family: monospace, system-ui, sans-serif;
+  font-size: clamp(1.3rem, 4vw, 2rem);
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  border-radius: 10px;
+  margin: 0;
+  max-width: min(320px, 90%);
+  box-shadow:
+    0 4px 20px rgba(255, 213, 79, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.35);
+  /* ui-monospace zuerst — moderne System-Monospace. "monospace" allein fiel frueher auf
+     system-ui zurueck weil es als Font-Name interpretiert wurde. */
+  font-family: ui-monospace, 'SF Mono', Menlo, Consolas, 'Courier New', monospace;
+  line-height: 1;
 }
 
 /* ── Animations ─────────────────────────────────────────────────────────── */

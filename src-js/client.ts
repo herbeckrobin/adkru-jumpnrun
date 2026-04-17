@@ -1,3 +1,4 @@
+import { ApiClient, type ApiConfig, type ScoreResult } from './api-client.ts';
 import './client.css';
 import type { GameConfig } from './engine/index.ts';
 import { GameConfigSchema, GameLoop, GameWorld } from './engine/index.ts';
@@ -12,33 +13,39 @@ export interface JumpnrunConfig {
   width?: number;
   height?: number;
   discountCode?: string;
+  /** REST-API für Session-Start und Score-Submit. Fehlt wenn Plugin standalone läuft. */
+  api?: ApiConfig;
   /** Show collision hitboxes + sprite masks on load. Toggle at runtime with `D`. */
   debug?: boolean;
 }
 
 // ── Minimal DOM UI (created programmatically, no PHP template required) ───
 
+interface GameOverHandlers {
+  /** Submittet den Score mit dem eingegebenen Namen. */
+  onSave: (name: string) => Promise<ScoreResult | null>;
+  /** User waehlt "Weiter spielen" ohne zu speichern. */
+  onSkip: () => void;
+  /** Nach dem Saved-Screen "Nochmal spielen". */
+  onRestart: () => void;
+  /** Optional: vorgeschlagener Name (z.B. aus localStorage). */
+  suggestedName?: string;
+}
+
+const LAST_NAME_KEY = 'jumpnrun:lastName';
+
 class GameUI {
   readonly canvas: HTMLCanvasElement;
 
   private readonly startOverlay: HTMLElement;
-  private readonly nameInput: HTMLInputElement;
   private readonly startBtn: HTMLElement;
-
   private readonly gameOverOverlay: HTMLElement;
-  private readonly gameOverTitle: HTMLElement;
-  private readonly scoreLabel: HTMLElement;
-  private readonly scoreDisplay: HTMLElement;
-  private readonly restartBtn: HTMLElement;
 
   private readonly discountPopup: HTMLElement;
   private readonly discountCodeEl: HTMLElement;
   private readonly closeDiscountBtn: HTMLElement;
 
-  private _playerName = 'Spieler';
-
   constructor(root: HTMLElement, width: number, height: number) {
-    // Wrapper keeps overlays positioned over the canvas
     const wrap = el('div', 'jnr-wrap');
     root.appendChild(wrap);
 
@@ -47,46 +54,18 @@ class GameUI {
     this.canvas.height = height;
     wrap.appendChild(this.canvas);
 
-    // ── Start overlay ─────────────────────────────────────────────────────
+    // ── Start overlay (kein Name — der kommt erst beim Speichern) ─────────
     this.startOverlay = overlay(wrap, 'jnr-start');
-    this.nameInput = document.createElement('input');
-    this.nameInput.type = 'text';
-    this.nameInput.maxLength = 15;
-    this.nameInput.placeholder = 'Dein Name (optional)';
-    this.nameInput.className = 'jnr-input';
-    this.nameInput.autocomplete = 'off';
     this.startBtn = el('button', 'jnr-btn', 'Spiel starten');
-
-    const hr = document.createElement('hr');
-    hr.className = 'jnr-divider';
-
     this.startOverlay.append(
       el('h2', 'jnr-title', 'Jump & Run'),
       el('p', 'jnr-subtitle', 'Leertaste · Klick · Touch — Doppelsprung möglich'),
-      hr,
-      this.nameInput,
+      divider(),
       this.startBtn,
     );
 
-    // ── Game-over overlay ─────────────────────────────────────────────────
+    // ── Game-over overlay (Inhalt je Screen dynamisch) ────────────────────
     this.gameOverOverlay = overlay(wrap, 'jnr-gameover jnr-hidden');
-    this.gameOverTitle = el('h2', 'jnr-title', 'Game Over');
-    this.scoreLabel = el('p', 'jnr-score-label', 'Dein Score');
-    this.scoreDisplay = el('p', 'jnr-score-display', '0');
-    this.restartBtn = el('button', 'jnr-btn', 'Nochmal spielen');
-    const restartSecondary = el('button', 'jnr-btn jnr-btn-secondary', 'Zur Startseite');
-    restartSecondary.onclick = () => {
-      this.gameOverOverlay.classList.add('jnr-hidden');
-      this.startOverlay.classList.remove('jnr-hidden');
-    };
-
-    this.gameOverOverlay.append(
-      this.gameOverTitle,
-      this.scoreLabel,
-      this.scoreDisplay,
-      this.restartBtn,
-      restartSecondary,
-    );
 
     // ── Discount popup ────────────────────────────────────────────────────
     this.discountPopup = overlay(wrap, 'jnr-discount jnr-hidden');
@@ -101,41 +80,26 @@ class GameUI {
     );
   }
 
-  get playerName(): string {
-    return this.nameInput.value
-      .replace(/[^a-zA-Z0-9 ]/g, '')
-      .trim()
-      .slice(0, 15);
-  }
-
-  showStart(onStart: (name: string) => void): void {
+  showStart(onStart: () => void): void {
     this.startOverlay.classList.remove('jnr-hidden');
-    this.nameInput.focus();
-
-    const go = (): void => {
-      this._playerName = this.playerName || 'Spieler';
+    this.startBtn.onclick = () => {
       this.startOverlay.classList.add('jnr-hidden');
-      onStart(this._playerName);
-    };
-    this.startBtn.onclick = go;
-    this.nameInput.onkeydown = (e) => {
-      if (e.key === 'Enter') {
-        e.preventDefault();
-        go();
-      }
+      onStart();
     };
   }
 
-  showGameOver(score: number, onRestart: () => void): void {
-    this.gameOverTitle.textContent =
-      score > 20 ? 'Stark!' : score > 10 ? 'Gut gespielt!' : 'Game Over';
-    this.scoreLabel.textContent = `${this._playerName} · Dein Score`;
-    this.scoreDisplay.textContent = String(score);
-    this.gameOverOverlay.classList.remove('jnr-hidden');
-    this.restartBtn.onclick = () => {
-      this.gameOverOverlay.classList.add('jnr-hidden');
-      onRestart();
-    };
+  /**
+   * Komplette Game-Over-Sequenz: zeigt Score, Auswahl speichern/weiter,
+   * (optional) Name-Eingabe, Ergebnis. Ruecksprung zwischen Name-Input und
+   * Auswahl ist eingebaut. Client liefert nur 3 Callbacks.
+   */
+  showGameOver(score: number, handlers: GameOverHandlers): void {
+    const suggested = handlers.suggestedName ?? readLastName();
+    this.renderGameOverInitial(score, handlers, suggested);
+  }
+
+  hideGameOver(): void {
+    this.gameOverOverlay.classList.add('jnr-hidden');
   }
 
   showDiscount(code: string, onClose: () => void): void {
@@ -145,6 +109,135 @@ class GameUI {
       this.discountPopup.classList.add('jnr-hidden');
       onClose();
     };
+  }
+
+  private renderGameOverInitial(
+    score: number,
+    handlers: GameOverHandlers,
+    suggestedName: string,
+  ): void {
+    const title = score > 20 ? 'Stark!' : score > 10 ? 'Gut gespielt!' : 'Game Over';
+
+    const scoreGroup = el('div', 'jnr-score-group');
+    scoreGroup.append(
+      el('p', 'jnr-score-label', 'Dein Score'),
+      el('p', 'jnr-score-display', String(score)),
+    );
+
+    const saveBtn = el('button', 'jnr-btn', 'In Highscore speichern');
+    saveBtn.onclick = () => this.renderNameInput(score, handlers, suggestedName);
+
+    const skipBtn = el('button', 'jnr-btn jnr-btn-secondary', 'Weiter spielen');
+    skipBtn.onclick = () => handlers.onSkip();
+
+    this.render(el('h2', 'jnr-title', title), scoreGroup, divider(), saveBtn, skipBtn);
+  }
+
+  private renderNameInput(score: number, handlers: GameOverHandlers, defaultName: string): void {
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.maxLength = 15;
+    input.placeholder = 'Dein Name';
+    input.className = 'jnr-input';
+    input.autocomplete = 'off';
+    input.value = defaultName;
+
+    const submitBtn = el('button', 'jnr-btn', 'Speichern') as HTMLButtonElement;
+    const backBtn = el('button', 'jnr-btn jnr-btn-secondary', 'Zurück');
+
+    const submit = async (): Promise<void> => {
+      const name = sanitizeName(input.value);
+      if (name === '') {
+        input.focus();
+        return;
+      }
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Wird gespeichert…';
+      writeLastName(name);
+      const result = await handlers.onSave(name);
+      if (result) {
+        this.renderSaved(result, handlers);
+      } else {
+        handlers.onRestart();
+      }
+    };
+
+    submitBtn.onclick = submit;
+    backBtn.onclick = () => this.renderGameOverInitial(score, handlers, input.value);
+    input.onkeydown = (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        void submit();
+      }
+    };
+
+    this.render(
+      el('h2', 'jnr-title', 'Dein Name?'),
+      el('p', 'jnr-subtitle', `${score} Punkte in die Highscore-Liste`),
+      divider(),
+      input,
+      submitBtn,
+      backBtn,
+    );
+    setTimeout(() => input.focus(), 0);
+  }
+
+  private renderSaved(result: ScoreResult, handlers: GameOverHandlers): void {
+    const titleText = result.personalBest ? 'Neuer Bestwert!' : 'Noch nicht dein Bestwert';
+
+    const group = el('div', 'jnr-score-group');
+    if (result.personalBest) {
+      group.append(
+        el('p', 'jnr-score-label', 'Dein Platz'),
+        el('p', 'jnr-score-display', `#${result.rank}`),
+      );
+    } else {
+      group.append(
+        el('p', 'jnr-score-label', 'Dein Bestwert bleibt'),
+        el('p', 'jnr-score-display', `${result.storedScore}`),
+      );
+    }
+
+    const summary = result.personalBest
+      ? el('p', 'jnr-subtitle', `${result.name} · ${result.submittedScore} Punkte`)
+      : el(
+          'p',
+          'jnr-subtitle',
+          `Diesmal ${result.submittedScore} Punkte — der alte Score bleibt oben in der Liste.`,
+        );
+
+    const restartBtn = el('button', 'jnr-btn', 'Nochmal spielen');
+    restartBtn.onclick = handlers.onRestart;
+
+    this.render(el('h2', 'jnr-title', titleText), group, summary, divider(), restartBtn);
+  }
+
+  private render(...children: HTMLElement[]): void {
+    this.gameOverOverlay.replaceChildren(...children);
+    this.gameOverOverlay.classList.remove('jnr-hidden');
+  }
+}
+
+function sanitizeName(raw: string): string {
+  return raw
+    .replace(/[^a-zA-Z0-9 _-]/g, '')
+    .trim()
+    .slice(0, 15);
+}
+
+function readLastName(): string {
+  try {
+    return localStorage.getItem(LAST_NAME_KEY) ?? '';
+  } catch {
+    return '';
+  }
+}
+
+function writeLastName(name: string): void {
+  try {
+    localStorage.setItem(LAST_NAME_KEY, name);
+  } catch {
+    // localStorage kann blockiert sein (Privacy-Mode) — ignorieren.
   }
 }
 
@@ -192,12 +285,49 @@ export function bootstrap(root: HTMLElement, rawConfig: JumpnrunConfig = {}): vo
     () => renderer.render(world.state, images),
   );
 
+  const apiClient = rawConfig.api ? new ApiClient(rawConfig.api) : null;
+  let sessionId: string | null = null;
+  let lastLevel = 1;
+
   // ── Engine events ──────────────────────────────────────────────────────
+  world.events.on('score', ({ level }) => {
+    lastLevel = level;
+  });
+  world.events.on('level-change', ({ level }) => {
+    lastLevel = level;
+  });
+
+  const openSession = (): void => {
+    if (apiClient) {
+      apiClient.startSession().then((id) => {
+        sessionId = id;
+      });
+    }
+  };
+
+  const startNewRun = (): void => {
+    ui.hideGameOver();
+    world.restart();
+    lastLevel = 1;
+    openSession();
+    loop.start();
+  };
+
   world.events.on('game-over', ({ score }) => {
     loop.stop();
-    ui.showGameOver(score, () => {
-      world.restart();
-      loop.start();
+    const savedSession = sessionId;
+    const savedLevel = lastLevel;
+    sessionId = null;
+
+    ui.showGameOver(score, {
+      onSave: async (name: string) => {
+        if (!apiClient || !savedSession || score <= 0) {
+          return null;
+        }
+        return apiClient.submitScore(savedSession, name, score, savedLevel);
+      },
+      onSkip: startNewRun,
+      onRestart: startNewRun,
     });
   });
 
@@ -228,7 +358,8 @@ export function bootstrap(root: HTMLElement, rawConfig: JumpnrunConfig = {}): vo
   );
 
   // ── Start screen ───────────────────────────────────────────────────────
-  ui.showStart((_name) => {
+  ui.showStart(() => {
+    openSession();
     world.start();
     loop.start();
   });
@@ -271,4 +402,10 @@ function overlay(parent: HTMLElement, cls: string): HTMLElement {
   const e = el('div', `jnr-overlay ${cls}`);
   parent.appendChild(e);
   return e;
+}
+
+function divider(): HTMLElement {
+  const hr = document.createElement('hr');
+  hr.className = 'jnr-divider';
+  return hr;
 }
