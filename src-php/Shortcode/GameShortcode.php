@@ -42,19 +42,28 @@ final class GameShortcode
             $atts = [];
         }
 
-        $defaults = ConfigService::gameDefaults();
+        // Admin-Settings ins Engine-Objekt, dann Shortcode-Attrs als Instance-Override.
+        $engine = ConfigService::engineConfig();
 
         $atts = shortcode_atts([
-            'width' => 960,
-            'height' => 540,
-            'discount_code' => $defaults['discountCode'],
+            'width' => null,
+            'height' => null,
+            'discount_code' => null,
         ], $atts, self::TAG);
+
+        if ($atts['width'] !== null) {
+            $engine['canvasWidth'] = (int) $atts['width'];
+        }
+        if ($atts['height'] !== null) {
+            $engine['canvasHeight'] = (int) $atts['height'];
+        }
+        if ($atts['discount_code'] !== null) {
+            $engine['discountCode'] = (string) $atts['discount_code'];
+        }
 
         $sprites = JUMPNRUN_URL . 'assets/sprites/';
         $config = [
-            'width' => (int) $atts['width'],
-            'height' => (int) $atts['height'],
-            'discountCode' => (string) $atts['discount_code'],
+            'engine' => $engine,
             'api' => [
                 'root' => esc_url_raw(rest_url(RestController::NAMESPACE . '/')),
                 'nonce' => wp_create_nonce('wp_rest'),
@@ -63,7 +72,7 @@ final class GameShortcode
         ];
 
         $json = wp_json_encode($config, JSON_HEX_TAG | JSON_HEX_AMP);
-        $width = (int) $atts['width'];
+        $width = (int) $engine['canvasWidth'];
 
         return sprintf(
             '<div id="jumpnrun-root" style="max-width:%dpx;margin-inline:auto;"></div>' .

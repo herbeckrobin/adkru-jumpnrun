@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Jumpnrun;
 
+use Jumpnrun\Admin\AdminMenu;
 use Jumpnrun\Api\RestController;
 use Jumpnrun\Db\Schema;
 use Jumpnrun\Shortcode\GameShortcode;
@@ -29,6 +30,10 @@ final class Plugin
         add_action('plugins_loaded', [Schema::class, 'maybeUpgrade'], 20);
         add_action('init', [$this, 'registerShortcodes']);
         add_action('rest_api_init', [new RestController(), 'registerRoutes']);
+
+        if (is_admin()) {
+            (new AdminMenu())->register();
+        }
     }
 
     public function registerShortcodes(): void
