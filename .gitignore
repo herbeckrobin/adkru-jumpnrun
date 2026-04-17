@@ -24,6 +24,7 @@ Thumbs.db
 # PHP
 vendor/
 composer.lock
+.phpunit.cache/
 
 # Plugin build artifacts (Vite-Output)
 assets/game/*.js
