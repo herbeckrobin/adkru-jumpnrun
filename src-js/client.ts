@@ -10,9 +10,8 @@ import { CanvasRenderer, loadImages } from './renderer/index.ts';
 export interface JumpnrunConfig {
   /** Key → absolute URL for each sprite. Missing keys fall back to solid colors. */
   images?: Record<string, string>;
-  width?: number;
-  height?: number;
-  discountCode?: string;
+  /** Engine-Config (wird via Zod validiert, alle Felder optional). */
+  engine?: Partial<GameConfig>;
   /** REST-API für Session-Start und Score-Submit. Fehlt wenn Plugin standalone läuft. */
   api?: ApiConfig;
   /** Show collision hitboxes + sprite masks on load. Toggle at runtime with `D`. */
@@ -247,11 +246,10 @@ export function bootstrap(root: HTMLElement, rawConfig: JumpnrunConfig = {}): vo
   if (root.dataset.jnrBooted) return;
   root.dataset.jnrBooted = '1';
 
-  const engineCfg = GameConfigSchema.parse({
-    ...(rawConfig.width != null ? { canvasWidth: rawConfig.width } : {}),
-    ...(rawConfig.height != null ? { canvasHeight: rawConfig.height } : {}),
-    ...(rawConfig.discountCode != null ? { discountCode: rawConfig.discountCode } : {}),
-  } satisfies Partial<GameConfig>);
+  // Zod parst und clampt: unbekannte Felder werden ignoriert, fehlende Felder
+  // fallen auf Defaults zurueck. Der Server hat schon sanitized, Zod ist hier
+  // Second-Gate gegen kaputte window.JumpnrunConfig Manipulation.
+  const engineCfg = GameConfigSchema.parse(rawConfig.engine ?? {});
 
   const ui = new GameUI(root, engineCfg.canvasWidth, engineCfg.canvasHeight);
 
