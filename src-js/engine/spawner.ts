@@ -1,26 +1,50 @@
 import type { GameConfig } from './config/index.ts';
-import type { Coin, Obstacle, Platform, SpriteMask } from './types.ts';
+import type { Coin, Obstacle, ObstacleSpec, Platform, PlatformSpec, SpriteMask } from './types.ts';
 
 export class Spawner {
   private masks: ReadonlyMap<string, SpriteMask> = new Map();
 
-  constructor(private readonly cfg: GameConfig) {}
+  constructor(
+    private readonly cfg: GameConfig,
+    private readonly obstaclePool: readonly ObstacleSpec[] = [],
+    private readonly platformPool: readonly PlatformSpec[] = [],
+  ) {}
 
   setMasks(masks: ReadonlyMap<string, SpriteMask>): void {
     this.masks = masks;
   }
 
-  obstacle(_level: number): Obstacle {
+  /**
+   * Liefert das naechste Hindernis aus dem CPT-Pool (gefiltert nach min_level,
+   * gewichtet gezogen). Pool leer → Dummy-Hindernis mit zufaelliger Groesse,
+   * das der Renderer als Solid-Color-Box zeichnet (analog zum Sky-Gradient
+   * fuer fehlende Backgrounds). Konsistente Regel: keine Mediathek-Zuweisung
+   * → Farbflaeche, aber das Gameplay laeuft weiter.
+   */
+  obstacle(level: number): Obstacle {
+    const available = this.obstaclePool.filter((o) => o.minLevel <= level);
+    if (available.length > 0) {
+      const chosen = weightedPick(available);
+      return {
+        x: this.cfg.canvasWidth + 50,
+        y: this.cfg.canvasHeight - this.cfg.groundOffset - chosen.height,
+        width: chosen.width,
+        height: chosen.height,
+        imageKey: chosen.imageKey,
+        mask: this.masks.get(chosen.imageKey),
+      };
+    }
+    // Dummy mit zufaelliger Groesse — keine Mask, Renderer faellt auf
+    // FALLBACK['obstacle-fallback'] (Solid-Color) zurueck.
     const width = 60 + Math.random() * 50;
     const height = 80 + Math.random() * 60;
-    const imageKey = `obstacle-${Math.floor(Math.random() * 3)}`;
     return {
       x: this.cfg.canvasWidth + 50,
       y: this.cfg.canvasHeight - this.cfg.groundOffset - height,
       width,
       height,
-      imageKey,
-      mask: this.masks.get(imageKey),
+      imageKey: 'obstacle-fallback',
+      mask: undefined,
     };
   }
 
@@ -30,7 +54,24 @@ export class Spawner {
     return minTime + Math.random() * 1200;
   }
 
-  coin(): Coin {
+  /**
+   * Erzeugt einen Coin. Optional koennen aktuell lebende Obstacles
+   * uebergeben werden — wenn der Kandidat mit einem davon ueberlappt,
+   * werden bis zu drei alternative Positionen probiert. Scheitert das,
+   * wird der Spawn uebersprungen (`null`) — Coins regenerieren sich
+   * eh kontinuierlich, ein gelegentliches Auslassen ist unsichtbar.
+   */
+  coin(obstacles: readonly Obstacle[] = []): Coin | null {
+    for (let attempt = 0; attempt < 4; attempt++) {
+      const candidate = this.makeCoinCandidate();
+      if (!this.overlapsAnyObstacle(candidate, obstacles)) {
+        return candidate;
+      }
+    }
+    return null;
+  }
+
+  private makeCoinCandidate(): Coin {
     const groundY = this.cfg.canvasHeight - this.cfg.groundOffset;
     return {
       x: this.cfg.canvasWidth + Math.random() * 250,
@@ -42,18 +83,52 @@ export class Spawner {
     };
   }
 
+  private overlapsAnyObstacle(coin: Coin, obstacles: readonly Obstacle[]): boolean {
+    const pad = 8; // kleiner Puffer damit Coins nicht direkt an Kanten kleben
+    for (const o of obstacles) {
+      if (
+        coin.x < o.x + o.width + pad &&
+        coin.x + coin.width + pad > o.x &&
+        coin.y < o.y + o.height + pad &&
+        coin.y + coin.height + pad > o.y
+      ) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   coinDelay(): number {
     return 600 + Math.random() * 1200;
   }
 
+  /**
+   * Setzt die initialen Plattformen — pro Slot wird ein Spec aus dem CPT-Pool
+   * gezogen. Pool leer → Solid-Color-Dummy mit Standardgroesse, das Spiel
+   * bleibt spielbar.
+   */
   platforms(): Platform[] {
-    return Array.from({ length: 4 }, (_, i) => ({
-      x: this.cfg.canvasWidth + i * 1200,
-      y: this.cfg.canvasHeight - 180 - Math.random() * 180,
-      width: 120,
-      height: 18,
-      imageKey: `platform-${i % 2}`,
-    }));
+    return Array.from({ length: 4 }, (_, i) => {
+      const x = this.cfg.canvasWidth + i * 1200;
+      const y = this.cfg.canvasHeight - 180 - Math.random() * 180;
+      if (this.platformPool.length > 0) {
+        const chosen = weightedPick(this.platformPool);
+        return {
+          x,
+          y,
+          width: chosen.width,
+          height: chosen.height,
+          imageKey: chosen.imageKey,
+        };
+      }
+      return {
+        x,
+        y,
+        width: 120,
+        height: 18,
+        imageKey: 'platform-fallback',
+      };
+    });
   }
 
   platformCoin(platform: Platform): Coin {
@@ -73,4 +148,20 @@ export class Spawner {
       this.masks.get('player') ?? this.masks.get('player-idle') ?? this.masks.get('player-jump')
     );
   }
+}
+
+/**
+ * Gewichtete Zufallsauswahl. Jeder Eintrag hat `weight >= 1`, die Summe
+ * bestimmt die Ziehungs-Wahrscheinlichkeit. Leere Liste → Runtime-Error,
+ * aber aufrufer pruefen vorher via `length > 0`.
+ */
+export function weightedPick<T extends { weight: number }>(items: readonly T[]): T {
+  const total = items.reduce((s, i) => s + Math.max(1, i.weight), 0);
+  let r = Math.random() * total;
+  for (const item of items) {
+    r -= Math.max(1, item.weight);
+    if (r <= 0) return item;
+  }
+  // biome-ignore lint/style/noNonNullAssertion: length > 0 vom Aufrufer garantiert
+  return items[items.length - 1]!;
 }

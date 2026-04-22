@@ -1,5 +1,6 @@
 import { fitRect } from '../engine/fit.ts';
-import type { GameState, SpriteMask } from '../engine/types.ts';
+import { weightedPick } from '../engine/spawner.ts';
+import type { BackgroundPool, GameState, SpriteMask } from '../engine/types.ts';
 import type { ImageMap, MaskMap } from './assets.ts';
 
 export interface DebugOptions {
@@ -11,7 +12,11 @@ export interface DebugOptions {
   coinMagnet: number;
 }
 
-/** Solid-color fallbacks when sprite images are missing. */
+/**
+ * Solid-color fallbacks wenn keine Image-URL fuer einen Sprite-Key in der
+ * `images`-Map liegt. Konsistente Regel: keine Mediathek-Zuweisung im Admin
+ * → das Spiel zeigt eine Farbflaeche statt zu crashen.
+ */
 const FALLBACK: Record<string, string> = {
   bg: '#1a3a4a',
   'player-idle': '#4fc3f7',
@@ -19,14 +24,18 @@ const FALLBACK: Record<string, string> = {
   'obstacle-0': '#ef5350',
   'obstacle-1': '#ff7043',
   'obstacle-2': '#ffa726',
+  'obstacle-fallback': '#ef5350',
   coin: '#ffd54f',
   'platform-0': '#78909c',
   'platform-1': '#546e7a',
+  'platform-fallback': '#78909c',
 };
 
 export class CanvasRenderer {
   debug: DebugOptions = { enabled: false, hitboxBuffer: 0, coinMagnet: 0 };
   private masks: MaskMap = new Map();
+  private backgroundPool: BackgroundPool = {};
+  private chosenBg: Map<number, string> = new Map();
 
   constructor(
     private readonly ctx: CanvasRenderingContext2D,
@@ -38,13 +47,43 @@ export class CanvasRenderer {
     this.masks = masks;
   }
 
+  /**
+   * Setzt den Level→Background-Pool (via CPTs im WP-Admin konfiguriert).
+   * Leeres Objekt → Renderer faellt auf den Legacy-Schluessel `bg-{level-1}` zurueck.
+   * Der Cache `chosenBg` wird geleert, damit ein neu geladener Pool ab sofort greift.
+   */
+  setBackgroundPool(pool: BackgroundPool): void {
+    this.backgroundPool = pool;
+    this.chosenBg.clear();
+  }
+
+  /**
+   * Entscheidet pro Level einmalig welches Bild aus dem Pool gezogen wird
+   * und cached das Ergebnis — sonst wuerde jedes Frame neu gelost und der
+   * Hintergrund flackerte. Liefert `null` wenn fuer das Level kein Background
+   * im CPT-Pool gepflegt ist; der Renderer faellt dann auf den Sky-Gradient zurueck.
+   */
+  private bgKeyForLevel(level: number): string | null {
+    const cached = this.chosenBg.get(level);
+    if (cached !== undefined) return cached === '' ? null : cached;
+    const pool = this.backgroundPool[String(level)];
+    if (pool && pool.length > 0) {
+      const chosen = weightedPick(pool);
+      this.chosenBg.set(level, chosen.imageKey);
+      return chosen.imageKey;
+    }
+    // Pool fuer dieses Level leer — Sky-Gradient-Fallback signalisieren.
+    this.chosenBg.set(level, '');
+    return null;
+  }
+
   render(state: GameState, images: ImageMap): void {
     const { ctx, width, height } = this;
     ctx.clearRect(0, 0, width, height);
 
     // ── Background ───────────────────────────────────────────────────────────
-    const bgKey = `bg-${state.level - 1}`;
-    const bg = images.get(bgKey);
+    const bgKey = this.bgKeyForLevel(state.level);
+    const bg = bgKey !== null ? images.get(bgKey) : undefined;
     if (bg) {
       ctx.drawImage(bg, state.backgroundX, 0, width, height);
       ctx.drawImage(bg, state.backgroundX + width, 0, width, height);

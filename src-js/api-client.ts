@@ -12,6 +12,13 @@ export interface ScoreResult {
   name: string;
 }
 
+export interface HighscoreEntry {
+  id: number;
+  name: string;
+  score: number;
+  level: number;
+}
+
 export class ApiClient {
   constructor(private readonly config: ApiConfig) {}
 
@@ -27,6 +34,19 @@ export class ApiClient {
     level: number,
   ): Promise<ScoreResult | null> {
     return this.post<ScoreResult>('score', { sessionId, name, score, level });
+  }
+
+  async getHighscores(limit = 10): Promise<HighscoreEntry[]> {
+    try {
+      const url = `${this.config.root}highscores?limit=${limit}`;
+      const res = await fetch(url, { credentials: 'same-origin' });
+      if (!res.ok) return [];
+      const body = (await res.json()) as { data?: HighscoreEntry[] };
+      return body.data ?? [];
+    } catch (err) {
+      console.warn('[jumpnrun] highscores failed', err);
+      return [];
+    }
   }
 
   private async post<T>(path: string, body: unknown): Promise<T | null> {

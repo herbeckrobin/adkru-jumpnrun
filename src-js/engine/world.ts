@@ -7,7 +7,9 @@ import type {
   GameState,
   GameStatus,
   Obstacle,
+  ObstacleSpec,
   Platform,
+  PlatformSpec,
   Player,
   SpriteMask,
 } from './types.ts';
@@ -38,9 +40,13 @@ export class GameWorld {
   private _nextObstacleDelay = 1500;
   private _nextCoinDelay = 800;
 
-  constructor(config: Partial<GameConfig> = {}) {
+  constructor(
+    config: Partial<GameConfig> = {},
+    obstaclePool: readonly ObstacleSpec[] = [],
+    platformPool: readonly PlatformSpec[] = [],
+  ) {
     this.cfg = { ...DEFAULT_CONFIG, ...config };
-    this.spawner = new Spawner(this.cfg);
+    this.spawner = new Spawner(this.cfg, obstaclePool, platformPool);
     this._player = this.buildPlayer();
   }
 
@@ -125,7 +131,8 @@ export class GameWorld {
     }
 
     if (this._coinTimer >= this._nextCoinDelay) {
-      this._coins.push(this.spawner.coin());
+      const coin = this.spawner.coin(this._obstacles);
+      if (coin !== null) this._coins.push(coin);
       this._coinTimer = 0;
       this._nextCoinDelay = this.spawner.coinDelay();
     }

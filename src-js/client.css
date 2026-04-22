@@ -1,5 +1,121 @@
 /* Jump-n-Run plugin styles — all classes prefixed jnr- */
 
+/* ── Layout (Canvas + Highscore-Sidebar) ────────────────────────────────── */
+
+.jnr-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(240px, 300px);
+  gap: 1.5rem;
+  align-items: start;
+  max-width: 1280px;
+  margin-inline: auto;
+}
+
+.jnr-layout > #jumpnrun-root {
+  min-width: 0; /* verhindert dass Canvas das Grid sprengt */
+}
+
+@media (max-width: 980px) {
+  .jnr-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ── Sidebar ────────────────────────────────────────────────────────────── */
+
+.jnr-sidebar {
+  background: rgba(5, 10, 20, 0.86);
+  color: #fff;
+  border-radius: 10px;
+  padding: 1.2rem 1rem 1.3rem;
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.5),
+    0 0 0 1px rgba(255, 255, 255, 0.06);
+  font-family: system-ui, -apple-system, sans-serif;
+}
+
+.jnr-sidebar-title {
+  margin: 0 0 0.8rem;
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: rgba(255, 255, 255, 0.55);
+  text-align: center;
+}
+
+.jnr-toplist {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  counter-reset: jnr-rank;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.jnr-toplist-row {
+  counter-increment: jnr-rank;
+  display: grid;
+  grid-template-columns: 1.8rem 1fr auto;
+  align-items: baseline;
+  gap: 0.5rem;
+  padding: 0.45rem 0.55rem;
+  border-radius: 6px;
+  font-size: 0.92rem;
+  transition: background 0.2s;
+}
+
+.jnr-toplist-row::before {
+  content: counter(jnr-rank);
+  color: rgba(255, 255, 255, 0.4);
+  font-variant-numeric: tabular-nums;
+  font-size: 0.82rem;
+  text-align: right;
+}
+
+.jnr-toplist-row:nth-child(1)::before {
+  color: #ffd54f;
+  font-weight: 700;
+}
+
+.jnr-toplist-row:nth-child(2)::before,
+.jnr-toplist-row:nth-child(3)::before {
+  color: rgba(255, 213, 79, 0.7);
+}
+
+.jnr-toplist-name {
+  color: rgba(255, 255, 255, 0.92);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.jnr-toplist-score {
+  color: #4fc3f7;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.jnr-toplist-row-me {
+  background: rgba(79, 195, 247, 0.14);
+  box-shadow: inset 0 0 0 1px rgba(79, 195, 247, 0.35);
+  animation: jnr-highlight 1.2s ease-out;
+}
+
+.jnr-toplist-empty {
+  margin: 0;
+  text-align: center;
+  color: rgba(255, 255, 255, 0.4);
+  font-size: 0.88rem;
+  padding: 0.4rem 0;
+}
+
+@keyframes jnr-highlight {
+  0% { background: rgba(79, 195, 247, 0.45); }
+  100% { background: rgba(79, 195, 247, 0.14); }
+}
+
 /* ── Wrapper ────────────────────────────────────────────────────────────── */
 
 .jnr-wrap {
@@ -195,6 +311,40 @@
      system-ui zurueck weil es als Font-Name interpretiert wurde. */
   font-family: ui-monospace, 'SF Mono', Menlo, Consolas, 'Courier New', monospace;
   line-height: 1;
+}
+
+/* ── Discount countdown (nach Bestaetigen des Rabattcodes) ──────────────── */
+
+.jnr-countdown {
+  margin: 0;
+  font-size: clamp(3rem, 10vw, 5rem);
+  font-weight: 900;
+  color: #4fc3f7;
+  line-height: 1;
+  letter-spacing: 0.02em;
+  text-shadow:
+    0 0 40px rgba(79, 195, 247, 0.7),
+    0 0 80px rgba(79, 195, 247, 0.35);
+  font-family: ui-monospace, 'SF Mono', Menlo, Consolas, 'Courier New', monospace;
+}
+
+.jnr-countdown-pulse {
+  animation: jnr-countdown-pulse 0.95s ease-out;
+}
+
+@keyframes jnr-countdown-pulse {
+  0% {
+    transform: scale(0.5);
+    opacity: 0;
+  }
+  35% {
+    transform: scale(1.2);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
 }
 
 /* ── Animations ─────────────────────────────────────────────────────────── */

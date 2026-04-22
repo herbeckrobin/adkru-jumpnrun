@@ -41,6 +41,36 @@ export interface Platform extends Rect {
   imageKey: string;
 }
 
+/**
+ * Ein Hindernis-Bauplan aus dem Asset-Pool (via WordPress-CPT gepflegt).
+ * Wird vom Spawner beim `obstacle()` gewichtet gezogen und in konkrete
+ * Obstacle-Instanzen materialisiert.
+ */
+export interface ObstacleSpec {
+  imageKey: string;
+  width: number;
+  height: number;
+  minLevel: number;
+  weight: number;
+}
+
+/** Hintergrund-Bauplan pro Level (mehrere moeglich, werden gewichtet gezogen). */
+export interface BackgroundSpec {
+  imageKey: string;
+  weight: number;
+}
+
+/** Level-Nummer → Pool moeglicher Hintergruende. */
+export type BackgroundPool = Readonly<Record<string, readonly BackgroundSpec[]>>;
+
+/** Plattform-Bauplan aus dem CPT-Pool (jnr_platform). */
+export interface PlatformSpec {
+  imageKey: string;
+  width: number;
+  height: number;
+  weight: number;
+}
+
 export type GameStatus = 'idle' | 'running' | 'paused' | 'gameover';
 
 export interface GameState {

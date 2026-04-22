@@ -1,11 +1,18 @@
 import { ApiClient, type ApiConfig, type ScoreResult } from './api-client.ts';
 import './client.css';
-import type { GameConfig } from './engine/index.ts';
+import type { BackgroundPool, GameConfig, ObstacleSpec, PlatformSpec } from './engine/index.ts';
 import { GameConfigSchema, GameLoop, GameWorld } from './engine/index.ts';
 import type { ImageMap } from './renderer/index.ts';
 import { CanvasRenderer, loadImages } from './renderer/index.ts';
+import { Scoreboard, type ScoreboardConfig } from './scoreboard.ts';
 
 // ── Public config interface (set via window.JumpnrunConfig in WP) ─────────
+
+export interface AssetPools {
+  backgrounds: BackgroundPool;
+  obstacles: readonly ObstacleSpec[];
+  platforms: readonly PlatformSpec[];
+}
 
 export interface JumpnrunConfig {
   /** Key → absolute URL for each sprite. Missing keys fall back to solid colors. */
@@ -14,7 +21,11 @@ export interface JumpnrunConfig {
   engine?: Partial<GameConfig>;
   /** REST-API für Session-Start und Score-Submit. Fehlt wenn Plugin standalone läuft. */
   api?: ApiConfig;
-  /** Show collision hitboxes + sprite masks on load. Toggle at runtime with `D`. */
+  /** Sichtbarkeit + Laenge der Scoreboard-Sidebar neben dem Canvas. */
+  scoreboard?: ScoreboardConfig;
+  /** Asset-Pools aus dem WP-Admin (CPTs). Fehlt → Engine nutzt Default-Sprites. */
+  assets?: AssetPools;
+  /** Show collision hitboxes + sprite masks on load. Toggle at runtime with `Shift+Ctrl+D`. */
   debug?: boolean;
 }
 
@@ -43,6 +54,7 @@ class GameUI {
   private readonly discountPopup: HTMLElement;
   private readonly discountCodeEl: HTMLElement;
   private readonly closeDiscountBtn: HTMLElement;
+  private readonly discountCountdownEl: HTMLElement;
 
   constructor(root: HTMLElement, width: number, height: number) {
     const wrap = el('div', 'jnr-wrap');
@@ -70,12 +82,14 @@ class GameUI {
     this.discountPopup = overlay(wrap, 'jnr-discount jnr-hidden');
     this.discountCodeEl = el('span', 'jnr-code', '');
     this.closeDiscountBtn = el('button', 'jnr-btn', 'Weiterspielen');
+    this.discountCountdownEl = el('p', 'jnr-countdown jnr-hidden', '');
     this.discountPopup.append(
       el('h2', 'jnr-title', 'Bonus freigeschaltet!'),
       el('p', 'jnr-subtitle', 'Dein persönlicher Rabattcode:'),
       this.discountCodeEl,
       el('p', 'jnr-subtitle', 'Code kopieren und beim Checkout einlösen.'),
       this.closeDiscountBtn,
+      this.discountCountdownEl,
     );
   }
 
@@ -104,10 +118,42 @@ class GameUI {
   showDiscount(code: string, onClose: () => void): void {
     this.discountCodeEl.textContent = code;
     this.discountPopup.classList.remove('jnr-hidden');
+    this.closeDiscountBtn.classList.remove('jnr-hidden');
+    this.discountCountdownEl.classList.add('jnr-hidden');
     this.closeDiscountBtn.onclick = () => {
-      this.discountPopup.classList.add('jnr-hidden');
-      onClose();
+      this.closeDiscountBtn.classList.add('jnr-hidden');
+      this.runDiscountCountdown(onClose);
     };
+  }
+
+  /**
+   * 3-2-1-Los!-Sequenz nachdem der Spieler den Rabattcode bestaetigt hat.
+   * Haelt das Spiel weiter pausiert (engine-status bleibt "paused"), bis der
+   * Countdown durchgelaufen ist — sonst stirbt der Spieler sofort weil die
+   * Hand noch nicht am Input ist.
+   */
+  private runDiscountCountdown(onClose: () => void): void {
+    const steps = ['3', '2', '1', 'Los!'];
+    const el = this.discountCountdownEl;
+    el.classList.remove('jnr-hidden');
+    let i = 0;
+    const tick = (): void => {
+      if (i >= steps.length) {
+        this.discountPopup.classList.add('jnr-hidden');
+        el.classList.add('jnr-hidden');
+        onClose();
+        return;
+      }
+      el.textContent = steps[i] ?? '';
+      // Reflow erzwingen, damit CSS-Animation pro Schritt neu startet.
+      el.classList.remove('jnr-countdown-pulse');
+      void el.offsetWidth;
+      el.classList.add('jnr-countdown-pulse');
+      i += 1;
+      // "Los!" darf etwas kuerzer bleiben als die Zahlen.
+      setTimeout(tick, i === steps.length ? 500 : 1000);
+    };
+    tick();
   }
 
   private renderGameOverInitial(
@@ -164,6 +210,9 @@ class GameUI {
     submitBtn.onclick = submit;
     backBtn.onclick = () => this.renderGameOverInitial(score, handlers, input.value);
     input.onkeydown = (e) => {
+      // Keystrokes im Namen-Input nicht an die globalen Listener durchreichen:
+      // sonst triggert "Space" einen Jump und "D" das Debug-Overlay.
+      e.stopPropagation();
       if (e.key === 'Enter') {
         e.preventDefault();
         void submit();
@@ -218,8 +267,10 @@ class GameUI {
 }
 
 function sanitizeName(raw: string): string {
+  // Spiegelbild der Server-Regel in ScoreEndpoint::sanitizeName — Unicode-Buchstaben
+  // und -Zahlen erlaubt, damit Umlaute, ß und internationale Schreibweisen durchkommen.
   return raw
-    .replace(/[^a-zA-Z0-9 _-]/g, '')
+    .replace(/[^\p{L}\p{N} _-]/gu, '')
     .trim()
     .slice(0, 15);
 }
@@ -237,6 +288,14 @@ function writeLastName(name: string): void {
     localStorage.setItem(LAST_NAME_KEY, name);
   } catch {
     // localStorage kann blockiert sein (Privacy-Mode) — ignorieren.
+  }
+}
+
+function hasDebugUrlParam(): boolean {
+  try {
+    return new URLSearchParams(window.location.search).get('jnr-debug') === '1';
+  } catch {
+    return false;
   }
 }
 
@@ -264,11 +323,16 @@ export function bootstrap(root: HTMLElement, rawConfig: JumpnrunConfig = {}): vo
 
   const renderer = new CanvasRenderer(ctx, engineCfg.canvasWidth, engineCfg.canvasHeight);
   renderer.debug = {
-    enabled: rawConfig.debug === true,
+    enabled: rawConfig.debug === true || hasDebugUrlParam(),
     hitboxBuffer: engineCfg.hitboxBuffer,
     coinMagnet: engineCfg.coinMagnet,
   };
-  const world = new GameWorld(engineCfg);
+
+  const obstaclePool = rawConfig.assets?.obstacles ?? [];
+  const platformPool = rawConfig.assets?.platforms ?? [];
+  const backgroundPool = rawConfig.assets?.backgrounds ?? {};
+  renderer.setBackgroundPool(backgroundPool);
+  const world = new GameWorld(engineCfg, obstaclePool, platformPool);
 
   let images: ImageMap = new Map();
   if (rawConfig.images) {
@@ -286,6 +350,17 @@ export function bootstrap(root: HTMLElement, rawConfig: JumpnrunConfig = {}): vo
   const apiClient = rawConfig.api ? new ApiClient(rawConfig.api) : null;
   let sessionId: string | null = null;
   let lastLevel = 1;
+
+  // Scoreboard-Sidebar: PHP rendert die Huelle nur wenn im Admin aktiviert.
+  // Fehlt sie, ueberspringen wir stillschweigend.
+  const sidebarEl = root.parentElement?.querySelector<HTMLElement>('.jnr-sidebar');
+  const scoreboard =
+    apiClient && sidebarEl && rawConfig.scoreboard?.enabled
+      ? new Scoreboard(sidebarEl, apiClient, rawConfig.scoreboard.limit)
+      : null;
+  if (scoreboard) {
+    void scoreboard.refresh();
+  }
 
   // ── Engine events ──────────────────────────────────────────────────────
   world.events.on('score', ({ level }) => {
@@ -322,7 +397,11 @@ export function bootstrap(root: HTMLElement, rawConfig: JumpnrunConfig = {}): vo
         if (!apiClient || !savedSession || score <= 0) {
           return null;
         }
-        return apiClient.submitScore(savedSession, name, score, savedLevel);
+        const result = await apiClient.submitScore(savedSession, name, score, savedLevel);
+        if (result && scoreboard) {
+          void scoreboard.refresh(result.name);
+        }
+        return result;
       },
       onSkip: startNewRun,
       onRestart: startNewRun,
@@ -340,7 +419,10 @@ export function bootstrap(root: HTMLElement, rawConfig: JumpnrunConfig = {}): vo
     if (e.code === 'Space') {
       e.preventDefault();
       jump();
-    } else if (e.code === 'KeyD') {
+    } else if (e.code === 'KeyD' && e.shiftKey && e.ctrlKey) {
+      // Shift+Ctrl+D statt nacktem D: verhindert versehentliche Aktivierung
+      // beim Tippen (vor allem im Namens-Input). URL-Param ?jnr-debug=1 bleibt
+      // als reproduzierbare Alternative erhalten.
       renderer.debug = { ...renderer.debug, enabled: !renderer.debug.enabled };
       console.info(`[jumpnrun] Debug ${renderer.debug.enabled ? 'ON' : 'OFF'}`);
     }
