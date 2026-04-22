@@ -75,6 +75,10 @@ final class SettingsPage
         $view = JUMPNRUN_DIR . 'views/admin/settings.php';
         if (file_exists($view)) {
             $sections = ConfigSchema::all();
+            // Sprites sind in der Spiel-Assets-Seite gebuendelt, Anti-Cheat ist
+            // ein Backend-Detail das den Kunden nicht im Admin-Tab interessieren
+            // soll. Schema selbst bleibt unangetastet — Sanitize + Defaults greifen.
+            unset($sections['sprites'], $sections['antiCheat']);
             $optionKey = ConfigService::OPTION_KEY;
             $optionGroup = self::OPTION_GROUP;
             require $view;
@@ -138,6 +142,25 @@ final class SettingsPage
                     esc_attr($id),
                     esc_attr($name),
                     esc_textarea((string) $value),
+                );
+                break;
+
+            case 'attachment':
+                $attachmentId = (int) $value;
+                $previewUrl = $attachmentId > 0 ? (string) wp_get_attachment_image_url($attachmentId, 'thumbnail') : '';
+                printf(
+                    '<div class="jnr-attachment-picker" data-jnr-picker="1" style="display:flex;align-items:center;gap:10px;">'
+                    . '<img class="jnr-attachment-preview" src="%4$s" alt="" style="%5$s">'
+                    . '<input type="hidden" id="%1$s" name="%2$s" value="%3$s" data-jnr-picker-input>'
+                    . '<button type="button" class="button" data-jnr-picker-select>Bild wählen</button>'
+                    . '<button type="submit" class="button" name="jnr_clear[%6$s]" value="1" data-jnr-picker-clear>Entfernen</button>'
+                    . '</div>',
+                    esc_attr($id),
+                    esc_attr($name),
+                    esc_attr((string) $attachmentId),
+                    esc_url($previewUrl),
+                    $previewUrl !== '' ? 'max-width:80px;height:auto;border-radius:4px;display:block;' : 'display:none;',
+                    esc_attr($key)
                 );
                 break;
 
