@@ -76,17 +76,33 @@ final class HighscoreRepository
         );
     }
 
-    /** Rang des Scores in der Top-Liste (1-basiert). */
-    public function rankOf(int $score): int
+    /**
+     * Rang des Spielers in der Top-Liste (1-basiert).
+     *
+     * Tie-Breaking identisch zu `topN`: bei Gleichstand gewinnt der aeltere
+     * Eintrag (kleineres updated_at). Name wird gebraucht um den eigenen
+     * Zeitstempel zu kennen — sonst divergieren Ranking-API und Listen-Order
+     * bei Score-Gleichstand.
+     */
+    public function rankOf(string $name, int $score): int
     {
         global $wpdb;
         $table = Schema::highscoresTable();
 
-        $higher = (int) $wpdb->get_var(
-            $wpdb->prepare("SELECT COUNT(*) FROM {$table} WHERE score > %d", $score)
+        $ahead = (int) $wpdb->get_var(
+            $wpdb->prepare(
+                "SELECT COUNT(*) FROM {$table} a
+                 WHERE a.score > %d
+                    OR (a.score = %d AND a.updated_at < (
+                        SELECT b.updated_at FROM {$table} b WHERE b.name = %s
+                    ))",
+                $score,
+                $score,
+                $name
+            )
         );
 
-        return $higher + 1;
+        return $ahead + 1;
     }
 
     public function delete(int $id): bool

@@ -76,7 +76,8 @@ final class ScoreEndpoint
         $result = $repo->upsert($name, $score, $level);
 
         // Rank zaehlt den gespeicherten (besten) Score, nicht zwingend den eingereichten.
-        $rank = $repo->rankOf($result['storedScore']);
+        // Name mitgeben, damit Ties nach demselben updated_at-Kriterium wie topN aufgeloest werden.
+        $rank = $repo->rankOf($name, $result['storedScore']);
 
         return new WP_REST_Response([
             'rank' => $rank,
