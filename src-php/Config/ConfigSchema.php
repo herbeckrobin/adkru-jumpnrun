@@ -33,7 +33,7 @@ final class ConfigSchema
                 'label' => 'Canvas',
                 'fields' => [
                     'canvasWidth'  => ['type' => 'int', 'default' => 960, 'min' => 320, 'max' => 1920, 'step' => 10, 'label' => 'Breite (px)'],
-                    'canvasHeight' => ['type' => 'int', 'default' => 540, 'min' => 240, 'max' => 1080, 'step' => 10, 'label' => 'Hoehe (px)'],
+                    'canvasHeight' => ['type' => 'int', 'default' => 540, 'min' => 240, 'max' => 1080, 'step' => 10, 'label' => 'Höhe (px)'],
                 ],
             ],
             'physics' => [
@@ -41,14 +41,14 @@ final class ConfigSchema
                 'fields' => [
                     'gravity'      => ['type' => 'float', 'default' => 1.8,  'min' => 0.5, 'max' => 5,  'step' => 0.1, 'label' => 'Gravitation (px/frame)'],
                     'jumpVelocity' => ['type' => 'float', 'default' => -22,  'min' => -40, 'max' => -5, 'step' => 0.5, 'label' => 'Sprungkraft (negativ = nach oben)'],
-                    'maxJumps'     => ['type' => 'int',   'default' => 2,    'min' => 1,   'max' => 5,  'step' => 1,   'label' => 'Max. Spruenge in Folge'],
+                    'maxJumps'     => ['type' => 'int',   'default' => 2,    'min' => 1,   'max' => 5,  'step' => 1,   'label' => 'Max. Sprünge in Folge'],
                 ],
             ],
             'hitbox' => [
                 'label' => 'Hitbox',
                 'fields' => [
-                    'hitboxBuffer' => ['type' => 'int', 'default' => 10, 'min' => -20, 'max' => 40, 'step' => 1, 'label' => 'Obstacle-Hitbox-Puffer (px)', 'help' => 'Positiv = Hindernis-Hitbox wird auf jeder Seite kleiner, der Spieler kommt naeher ran. Negativ = grosszuegiger gegen den Spieler.'],
-                    'coinMagnet'   => ['type' => 'int', 'default' => 10, 'min' => 0,   'max' => 40, 'step' => 1, 'label' => 'Coin-Magnet (px)',            'help' => 'Wie viele Pixel ausserhalb der sichtbaren Coin noch eingesammelt werden.'],
+                    'hitboxBuffer' => ['type' => 'int', 'default' => 10, 'min' => -20, 'max' => 40, 'step' => 1, 'label' => 'Obstacle-Hitbox-Puffer (px)', 'help' => 'Positiv = Hindernis-Hitbox wird auf jeder Seite kleiner, der Spieler kommt näher ran. Negativ = großzügiger gegen den Spieler.'],
+                    'coinMagnet'   => ['type' => 'int', 'default' => 10, 'min' => 0,   'max' => 40, 'step' => 1, 'label' => 'Coin-Magnet (px)',            'help' => 'Wie viele Pixel außerhalb der sichtbaren Coin noch eingesammelt werden.'],
                 ],
             ],
             'world' => [
@@ -67,7 +67,7 @@ final class ConfigSchema
                 'label' => 'Spieler',
                 'fields' => [
                     'playerWidth'  => ['type' => 'int', 'default' => 70,  'min' => 30, 'max' => 200, 'step' => 2, 'label' => 'Breite (px)'],
-                    'playerHeight' => ['type' => 'int', 'default' => 70,  'min' => 30, 'max' => 200, 'step' => 2, 'label' => 'Hoehe (px)'],
+                    'playerHeight' => ['type' => 'int', 'default' => 70,  'min' => 30, 'max' => 200, 'step' => 2, 'label' => 'Höhe (px)'],
                     'playerStartX' => ['type' => 'int', 'default' => 120, 'min' => 0,  'max' => 800, 'step' => 5, 'label' => 'Start-X-Position (px)'],
                 ],
             ],
@@ -76,6 +76,21 @@ final class ConfigSchema
                 'fields' => [
                     'discountCode'  => ['type' => 'string', 'default' => 'BURNERKING20', 'maxlen' => 32, 'label' => 'Rabattcode'],
                     'discountLevel' => ['type' => 'int',    'default' => 3, 'min' => 1, 'max' => 10, 'step' => 1, 'label' => 'Level bei dem Code erscheint'],
+                ],
+            ],
+            'layout' => [
+                'label' => 'Layout',
+                'fields' => [
+                    'showScoreboard'  => ['type' => 'bool', 'default' => true, 'label' => 'Highscore-Liste neben dem Spiel anzeigen', 'help' => 'Zeigt die Top-Liste permanent neben dem Canvas (Desktop). Unter 980 px wird sie unter dem Spiel gestapelt.'],
+                    'scoreboardLimit' => ['type' => 'int',  'default' => 10, 'min' => 3, 'max' => 25, 'step' => 1, 'label' => 'Anzahl Einträge'],
+                ],
+            ],
+            'sprites' => [
+                'label' => 'Sprites',
+                'fields' => [
+                    'playerIdleSprite' => ['type' => 'attachment', 'default' => 0, 'label' => 'Spielfigur (Moving)', 'help' => 'PNG mit transparentem Hintergrund. Empfohlen: ~150×150 px.'],
+                    'playerJumpSprite' => ['type' => 'attachment', 'default' => 0, 'label' => 'Spielfigur (Sprung)', 'help' => 'Wird beim Sprung angezeigt.'],
+                    'coinSprite'       => ['type' => 'attachment', 'default' => 0, 'label' => 'Coin', 'help' => 'PNG mit Transparenz, ~80×80 px.'],
                 ],
             ],
             'antiCheat' => [
@@ -132,8 +147,22 @@ final class ConfigSchema
             'bool' => (bool) $value,
             'url' => esc_url_raw((string) $value),
             'textarea' => (string) $value,
+            'attachment' => self::sanitizeAttachment($value),
             default => self::sanitizeString((string) $value, $spec),
         };
+    }
+
+    private static function sanitizeAttachment(mixed $value): int
+    {
+        $id = absint($value);
+        if ($id <= 0) {
+            return 0;
+        }
+        // Existenz-Check: nur echte Attachments durchlassen.
+        if (get_post_type($id) !== 'attachment') {
+            return 0;
+        }
+        return $id;
     }
 
     /** @param array<string, mixed> $spec */

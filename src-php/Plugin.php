@@ -5,7 +5,12 @@ declare(strict_types=1);
 namespace Jumpnrun;
 
 use Jumpnrun\Admin\AdminMenu;
+use Jumpnrun\Admin\AssetAdminColumns;
+use Jumpnrun\Admin\AssetMetaBoxes;
+use Jumpnrun\Admin\AssetsPage;
 use Jumpnrun\Api\RestController;
+use Jumpnrun\Assets\AssetPostTypes;
+use Jumpnrun\Assets\AssetSeeder;
 use Jumpnrun\Db\Schema;
 use Jumpnrun\Shortcode\GameShortcode;
 use Jumpnrun\Shortcode\ScoreboardShortcode;
@@ -31,8 +36,15 @@ final class Plugin
         add_action('init', [$this, 'registerShortcodes']);
         add_action('rest_api_init', [new RestController(), 'registerRoutes']);
 
+        // Asset-Pools (CPTs) sind auch im Frontend noetig — Registrierung im init.
+        (new AssetPostTypes())->register();
+
         if (is_admin()) {
             (new AdminMenu())->register();
+            (new AssetMetaBoxes())->register();
+            (new AssetAdminColumns())->register();
+            (new AssetsPage())->register();
+            (new AssetSeeder())->register();
         }
     }
 

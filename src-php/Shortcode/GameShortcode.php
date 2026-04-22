@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Jumpnrun\Shortcode;
 
 use Jumpnrun\Api\RestController;
+use Jumpnrun\Assets\AssetRepository;
 use Jumpnrun\Config\ConfigService;
 
 final class GameShortcode
@@ -62,42 +63,133 @@ final class GameShortcode
         }
 
         $sprites = JUMPNRUN_URL . 'assets/sprites/';
+        $scoreboard = ConfigService::scoreboardConfig();
+        $images = $this->spriteMap($sprites);
+        // Per Media-Picker zugewiesene Sprites ueberschreiben die Defaults.
+        foreach (ConfigService::spriteOverrides() as $key => $url) {
+            $images[$key] = $url;
+        }
+        $assets = $this->buildAssetPools($images);
+
         $config = [
             'engine' => $engine,
             'api' => [
                 'root' => esc_url_raw(rest_url(RestController::NAMESPACE . '/')),
                 'nonce' => wp_create_nonce('wp_rest'),
             ],
-            'images' => $this->spriteMap($sprites),
+            'images' => $images,
+            'assets' => $assets,
+            'scoreboard' => $scoreboard,
         ];
 
         $json = wp_json_encode($config, JSON_HEX_TAG | JSON_HEX_AMP);
         $width = (int) $engine['canvasWidth'];
 
+        if (!$scoreboard['enabled']) {
+            // Layout bleibt wie vor v0.4 — Single-Column.
+            return sprintf(
+                '<div id="jumpnrun-root" style="max-width:%dpx;margin-inline:auto;"></div>' .
+                '<script>window.JumpnrunConfig=%s;</script>',
+                $width,
+                $json
+            );
+        }
+
+        // 2-Spalten-Layout: Canvas links, Highscore-Sidebar rechts.
+        // CSS stapelt unter 980 px automatisch.
         return sprintf(
-            '<div id="jumpnrun-root" style="max-width:%dpx;margin-inline:auto;"></div>' .
+            '<div class="jnr-layout">' .
+                '<div id="jumpnrun-root" style="max-width:%dpx;"></div>' .
+                '<aside class="jnr-sidebar">' .
+                    '<h3 class="jnr-sidebar-title">Top %d</h3>' .
+                    '<ol class="jnr-toplist jnr-hidden" aria-live="polite"></ol>' .
+                    '<p class="jnr-toplist-empty">Noch keine Highscores.</p>' .
+                '</aside>' .
+            '</div>' .
             '<script>window.JumpnrunConfig=%s;</script>',
             $width,
+            (int) $scoreboard['limit'],
             $json
         );
     }
 
-    /** @return array<string, string> */
+    /**
+     * Liefert grundsaetzlich KEINE Default-Bild-URLs mehr. Bilder kommen
+     * ausschliesslich aus drei Quellen:
+     *
+     *   1. CPT-Pool jnr_background  (via AssetRepository)
+     *   2. CPT-Pool jnr_obstacle    (via AssetRepository)
+     *   3. Settings-Overrides       (Player/Coin/Plattform — Media-Picker im Admin)
+     *
+     * Was der Kunde nicht in der Mediathek zugewiesen hat, zeigt der Renderer
+     * als Solid-Color-Box (FALLBACK-Map in canvas.ts) bzw. den Sky-Gradient
+     * fuer den Hintergrund. Konsistente Regel: keine Zuweisung → Farbflaeche.
+     *
+     * @return array<string, string>
+     */
     private function spriteMap(string $base): array
     {
-        $keys = [
-            'bg-0', 'bg-1', 'bg-2', 'bg-3', 'bg-4',
-            'bg-5', 'bg-6', 'bg-7', 'bg-8', 'bg-9',
-            'player-idle', 'player-jump',
-            'obstacle-0', 'obstacle-1', 'obstacle-2',
-            'coin',
-            'platform-0', 'platform-1',
-        ];
+        // Plugin-Default-PNGs werden nicht mehr automatisch ans Frontend
+        // ausgeliefert — sie sind nur noch Source fuer den Seeder.
+        return [];
+    }
 
-        $map = [];
-        foreach ($keys as $key) {
-            $map[$key] = $base . $key . '.png';
+    /**
+     * Nimmt die im Admin gepflegten Asset-CPTs, verteilt deren Bild-URLs in die
+     * `$images`-Map mit eindeutigen Keys und liefert die Engine-kompatiblen Pools
+     * mit `imageKey`-Referenzen zurueck.
+     *
+     * @param array<string, string> $images Pass-by-reference: die Map wird um CPT-Eintraege erweitert
+     * @return array{backgrounds: \stdClass|array<string, list<array{imageKey:string,weight:int}>>, obstacles: list<array{imageKey:string,width:int,height:int,minLevel:int,weight:int}>, platforms: list<array{imageKey:string,width:int,height:int,weight:int}>}
+     */
+    private function buildAssetPools(array &$images): array
+    {
+        $pools = AssetRepository::pools();
+
+        $backgrounds = [];
+        foreach ($pools['backgrounds'] as $level => $items) {
+            $list = [];
+            foreach ($items as $idx => $item) {
+                $key = sprintf('bg-cpt-%d-%d', (int) $level, $idx);
+                $images[$key] = $item['url'];
+                $list[] = [
+                    'imageKey' => $key,
+                    'weight' => (int) $item['weight'],
+                ];
+            }
+            $backgrounds[(string) $level] = $list;
         }
-        return $map;
+
+        $obstacles = [];
+        foreach ($pools['obstacles'] as $idx => $item) {
+            $key = sprintf('obstacle-cpt-%d', $idx);
+            $images[$key] = $item['url'];
+            $obstacles[] = [
+                'imageKey' => $key,
+                'width' => (int) $item['width'],
+                'height' => (int) $item['height'],
+                'minLevel' => (int) $item['minLevel'],
+                'weight' => (int) $item['weight'],
+            ];
+        }
+
+        $platforms = [];
+        foreach ($pools['platforms'] as $idx => $item) {
+            $key = sprintf('platform-cpt-%d', $idx);
+            $images[$key] = $item['url'];
+            $platforms[] = [
+                'imageKey' => $key,
+                'width' => (int) $item['width'],
+                'height' => (int) $item['height'],
+                'weight' => (int) $item['weight'],
+            ];
+        }
+
+        return [
+            // Leerer Pool → stdClass damit JS-seitig ein Objekt bleibt statt zu einem Array zu degenerieren.
+            'backgrounds' => $backgrounds === [] ? new \stdClass() : $backgrounds,
+            'obstacles' => $obstacles,
+            'platforms' => $platforms,
+        ];
     }
 }

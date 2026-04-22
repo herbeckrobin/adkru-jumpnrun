@@ -91,17 +91,64 @@ final class ConfigService
 
     /**
      * Teil der Config, der an die JS-Engine geht (ohne Backend-Only-Felder
-     * wie antiCheat-Limits).
+     * wie antiCheat-Limits oder Layout-Flags).
      *
      * @return array<string, int|float|string|bool>
      */
     public static function engineConfig(): array
     {
         $cfg = self::getConfig();
-        $backendOnly = ['rateLimitSessionPerMin', 'rateLimitScorePerMin', 'minSessionDurationSec'];
-        foreach ($backendOnly as $key) {
+        $nonEngine = [
+            'rateLimitSessionPerMin',
+            'rateLimitScorePerMin',
+            'minSessionDurationSec',
+            'showScoreboard',
+            'scoreboardLimit',
+            'playerIdleSprite',
+            'playerJumpSprite',
+            'coinSprite',
+        ];
+        foreach ($nonEngine as $key) {
             unset($cfg[$key]);
         }
         return $cfg;
+    }
+
+    /** @return array{enabled:bool, limit:int} */
+    public static function scoreboardConfig(): array
+    {
+        $cfg = self::getConfig();
+        return [
+            'enabled' => (bool) ($cfg['showScoreboard'] ?? true),
+            'limit' => (int) ($cfg['scoreboardLimit'] ?? 10),
+        ];
+    }
+
+    /**
+     * URLs fuer die im Admin per Media-Picker zugewiesenen Sprites.
+     * Schluessel = sprite-image-key (passend zu den Default-PNGs in `assets/sprites/`).
+     * Wert = absolute URL des Attachments. Felder ohne Bild fehlen im Array.
+     *
+     * @return array<string, string>
+     */
+    public static function spriteOverrides(): array
+    {
+        $cfg = self::getConfig();
+        $map = [
+            'player-idle' => (int) ($cfg['playerIdleSprite'] ?? 0),
+            'player-jump' => (int) ($cfg['playerJumpSprite'] ?? 0),
+            'coin' => (int) ($cfg['coinSprite'] ?? 0),
+        ];
+        $out = [];
+        foreach ($map as $key => $id) {
+            if ($id <= 0) {
+                continue;
+            }
+            $url = wp_get_attachment_url($id);
+            if (is_string($url) && $url !== '') {
+                $out[$key] = $url;
+            }
+        }
+        return $out;
     }
 }
