@@ -4,7 +4,7 @@ Tags: game, jump-and-run, shortcode, highscore
 Requires at least: 6.4
 Tested up to: 6.9
 Requires PHP: 8.2
-Stable tag: 0.4.0
+Stable tag: 0.5.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -25,6 +25,12 @@ Updates kommen per GitHub-Release. Einmal per ZIP installieren, danach 1-Klick-U
 4. Shortcode `[jumpnrun]` in eine Seite einsetzen
 
 == Changelog ==
+
+= 0.5.0 =
+* Highscore-Liste wandert vom permanenten Sidebar-Slot in den Game-Over-Overlay (Canvas bekommt mehr Platz, Liste motiviert am richtigen Moment)
+* Pre-Flight-Namenscheck beim Speichern: Warnung wenn der eingegebene Name schon einem anderen Highscore-Eintrag gehört, mit Auswahl "Anderen Namen" oder "Score ersetzen/Verwerfen" je nach Score-Vergleich
+* Rang-Anzeige stimmt bei Score-Gleichstand jetzt mit der Listen-Sortierung überein (Tie-Breaking nach updated_at, identisch zum topN-Query)
+* Neuer REST-Endpoint `GET /highscore/lookup?name=X` für den Pre-Flight-Check
 
 = 0.4.0 =
 * Asset-Pools als CPTs: Hintergründe, Hindernisse und Plattformen als eigene Inhaltstypen mit Featured-Image, gewichteter Zufallsauswahl und Min-Level-Filter
