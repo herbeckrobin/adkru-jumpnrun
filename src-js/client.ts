@@ -32,6 +32,11 @@ export interface JumpnrunConfig {
 // ── Minimal DOM UI (created programmatically, no PHP template required) ───
 
 interface GameOverHandlers {
+  /**
+   * Pre-Flight: prueft ob der Name schon einen Score in der DB hat.
+   * Optional — wenn nicht gesetzt, wird ohne Warnung direkt gespeichert.
+   */
+  onLookup?: (name: string) => Promise<number | null>;
   /** Submittet den Score mit dem eingegebenen Namen. */
   onSave: (name: string) => Promise<ScoreResult | null>;
   /** User waehlt "Weiter spielen" ohne zu speichern. */
@@ -50,6 +55,7 @@ class GameUI {
   private readonly startOverlay: HTMLElement;
   private readonly startBtn: HTMLElement;
   private readonly gameOverOverlay: HTMLElement;
+  private readonly gameOverContent: HTMLElement;
 
   private readonly discountPopup: HTMLElement;
   private readonly discountCodeEl: HTMLElement;
@@ -75,8 +81,13 @@ class GameUI {
       this.startBtn,
     );
 
-    // ── Game-over overlay (Inhalt je Screen dynamisch) ────────────────────
+    // ── Game-over overlay: linke Spalte = State-Inhalt, rechte Spalte
+    // (optional) = Scoreboard. Der gameOverContent-Wrapper haelt die
+    // State-Kinder damit wir sie per replaceChildren austauschen koennen,
+    // ohne das Scoreboard daneben zu entfernen.
     this.gameOverOverlay = overlay(wrap, 'jnr-gameover jnr-hidden');
+    this.gameOverContent = el('div', 'jnr-gameover-content');
+    this.gameOverOverlay.appendChild(this.gameOverContent);
 
     // ── Discount popup ────────────────────────────────────────────────────
     this.discountPopup = overlay(wrap, 'jnr-discount jnr-hidden');
@@ -102,6 +113,16 @@ class GameUI {
   }
 
   /**
+   * Haengt das Scoreboard als rechte Spalte ins Game-Over-Overlay. Wird nur
+   * einmal beim Bootstrap aufgerufen; Inhalte werden vom Scoreboard selbst
+   * refreshed.
+   */
+  attachScoreboard(element: HTMLElement): void {
+    this.gameOverOverlay.appendChild(element);
+    this.gameOverOverlay.classList.add('jnr-gameover-with-toplist');
+  }
+
+  /**
    * Komplette Game-Over-Sequenz: zeigt Score, Auswahl speichern/weiter,
    * (optional) Name-Eingabe, Ergebnis. Ruecksprung zwischen Name-Input und
    * Auswahl ist eingebaut. Client liefert nur 3 Callbacks.
@@ -118,6 +139,7 @@ class GameUI {
   showDiscount(code: string, onClose: () => void): void {
     this.discountCodeEl.textContent = code;
     this.discountPopup.classList.remove('jnr-hidden');
+    this.discountPopup.classList.remove('jnr-overlay-transparent');
     this.closeDiscountBtn.classList.remove('jnr-hidden');
     this.discountCountdownEl.classList.add('jnr-hidden');
     this.closeDiscountBtn.onclick = () => {
@@ -136,10 +158,14 @@ class GameUI {
     const steps = ['3', '2', '1', 'Los!'];
     const el = this.discountCountdownEl;
     el.classList.remove('jnr-hidden');
+    // Dunklen Overlay-Hintergrund waehrend des Countdowns wegnehmen, damit der
+    // Spieler seine Figur sieht und sich auf den Start vorbereiten kann.
+    this.discountPopup.classList.add('jnr-overlay-transparent');
     let i = 0;
     const tick = (): void => {
       if (i >= steps.length) {
         this.discountPopup.classList.add('jnr-hidden');
+        this.discountPopup.classList.remove('jnr-overlay-transparent');
         el.classList.add('jnr-hidden');
         onClose();
         return;
@@ -169,7 +195,7 @@ class GameUI {
       el('p', 'jnr-score-display', String(score)),
     );
 
-    const saveBtn = el('button', 'jnr-btn', 'In Highscore speichern');
+    const saveBtn = el('button', 'jnr-btn', 'Highscore speichern');
     saveBtn.onclick = () => this.renderNameInput(score, handlers, suggestedName);
 
     const skipBtn = el('button', 'jnr-btn jnr-btn-secondary', 'Weiter spielen');
@@ -190,6 +216,16 @@ class GameUI {
     const submitBtn = el('button', 'jnr-btn', 'Speichern') as HTMLButtonElement;
     const backBtn = el('button', 'jnr-btn jnr-btn-secondary', 'Zurück');
 
+    const commit = async (finalName: string): Promise<void> => {
+      writeLastName(finalName);
+      const result = await handlers.onSave(finalName);
+      if (result) {
+        this.renderSaved(result, handlers);
+      } else {
+        handlers.onRestart();
+      }
+    };
+
     const submit = async (): Promise<void> => {
       const name = sanitizeName(input.value);
       if (name === '') {
@@ -197,14 +233,22 @@ class GameUI {
         return;
       }
       submitBtn.disabled = true;
-      submitBtn.textContent = 'Wird gespeichert…';
-      writeLastName(name);
-      const result = await handlers.onSave(name);
-      if (result) {
-        this.renderSaved(result, handlers);
-      } else {
-        handlers.onRestart();
+
+      // Pre-Flight: Name schon vergeben? Dann warnen statt blind zu speichern —
+      // der Spieler wusste evtl. nicht, dass der Name schon einem anderen
+      // Highscore-Eintrag gehoert. Erst nach Bestaetigung wird die Session
+      // durch den Submit verbraucht.
+      if (handlers.onLookup) {
+        submitBtn.textContent = 'Prüfe…';
+        const existing = await handlers.onLookup(name);
+        if (existing !== null) {
+          this.renderNameTaken(score, name, existing, handlers, commit);
+          return;
+        }
       }
+
+      submitBtn.textContent = 'Wird gespeichert…';
+      await commit(name);
     };
 
     submitBtn.onclick = submit;
@@ -221,7 +265,7 @@ class GameUI {
 
     this.render(
       el('h2', 'jnr-title', 'Dein Name?'),
-      el('p', 'jnr-subtitle', `${score} Punkte in die Highscore-Liste`),
+      el('p', 'jnr-subtitle', `${score} Punkte — so erscheinst du in der Liste`),
       divider(),
       input,
       submitBtn,
@@ -230,8 +274,76 @@ class GameUI {
     setTimeout(() => input.focus(), 0);
   }
 
+  /**
+   * Warn-Screen wenn der gewaehlte Name schon in der Liste steht. Zwei Faelle:
+   *
+   *  - Neuer Score > gespeicherter Score: Saven wuerde ueberschreiben.
+   *    Buttons: "Score ersetzen" (primary) und "Anderen Namen" (secondary).
+   *  - Neuer Score <= gespeicherter Score: Saven ist sinnlos (GREATEST haelt
+   *    den alten Wert) und wuerde die Session verbrauchen. Der "Trotzdem
+   *    speichern"-Weg fehlt bewusst — Buttons: "Anderen Namen" und
+   *    "Verwerfen" (startet neue Runde ohne Save).
+   *
+   * Die Session wird erst beim `commit` verbraucht — hier kann noch
+   * abgebrochen werden.
+   */
+  private renderNameTaken(
+    score: number,
+    name: string,
+    existingScore: number,
+    handlers: GameOverHandlers,
+    commit: (name: string) => Promise<void>,
+  ): void {
+    const beatsExisting = score > existingScore;
+
+    const group = el('div', 'jnr-score-group');
+    group.append(
+      el('p', 'jnr-score-label', `"${name}" hat bereits`),
+      el('p', 'jnr-score-display', String(existingScore)),
+    );
+
+    const subtitleText = beatsExisting
+      ? `Dein Score (${score}) würde den alten ersetzen.`
+      : `Dein Score (${score}) reicht nicht — Save würde nichts ändern.`;
+
+    const pickOtherBtn = el('button', 'jnr-btn', 'Anderen Namen') as HTMLButtonElement;
+    pickOtherBtn.onclick = () => this.renderNameInput(score, handlers, name);
+
+    const secondBtn = beatsExisting
+      ? (() => {
+          const btn = el(
+            'button',
+            'jnr-btn jnr-btn-secondary',
+            'Score ersetzen',
+          ) as HTMLButtonElement;
+          btn.onclick = async () => {
+            btn.disabled = true;
+            pickOtherBtn.disabled = true;
+            btn.textContent = 'Wird gespeichert…';
+            await commit(name);
+          };
+          return btn;
+        })()
+      : (() => {
+          const btn = el('button', 'jnr-btn jnr-btn-secondary', 'Verwerfen') as HTMLButtonElement;
+          btn.onclick = () => handlers.onSkip();
+          return btn;
+        })();
+
+    this.render(
+      el('h2', 'jnr-title', 'Name vergeben'),
+      group,
+      el('p', 'jnr-subtitle', subtitleText),
+      divider(),
+      pickOtherBtn,
+      secondBtn,
+    );
+  }
+
   private renderSaved(result: ScoreResult, handlers: GameOverHandlers): void {
-    const titleText = result.personalBest ? 'Neuer Bestwert!' : 'Noch nicht dein Bestwert';
+    // Kurze Titel — die Display-Font ist 3rem fett; laengere Texte brechen
+    // optisch auseinander und zerren die Content-Spalte in die Breite.
+    const titleText = result.personalBest ? 'Neuer Bestwert!' : 'Kein Bestwert';
 
     const group = el('div', 'jnr-score-group');
     if (result.personalBest) {
@@ -248,11 +360,7 @@ class GameUI {
 
     const summary = result.personalBest
       ? el('p', 'jnr-subtitle', `${result.name} · ${result.submittedScore} Punkte`)
-      : el(
-          'p',
-          'jnr-subtitle',
-          `Diesmal ${result.submittedScore} Punkte — der alte Score bleibt oben in der Liste.`,
-        );
+      : el('p', 'jnr-subtitle', `Diesmal ${result.submittedScore} Punkte`);
 
     const restartBtn = el('button', 'jnr-btn', 'Nochmal spielen');
     restartBtn.onclick = handlers.onRestart;
@@ -261,7 +369,9 @@ class GameUI {
   }
 
   private render(...children: HTMLElement[]): void {
-    this.gameOverOverlay.replaceChildren(...children);
+    // Nur den linken Content-Slot austauschen — das Scoreboard (falls vorhanden)
+    // lebt als Geschwister-Element im Overlay und bleibt bestehen.
+    this.gameOverContent.replaceChildren(...children);
     this.gameOverOverlay.classList.remove('jnr-hidden');
   }
 }
@@ -351,15 +461,14 @@ export function bootstrap(root: HTMLElement, rawConfig: JumpnrunConfig = {}): vo
   let sessionId: string | null = null;
   let lastLevel = 1;
 
-  // Scoreboard-Sidebar: PHP rendert die Huelle nur wenn im Admin aktiviert.
-  // Fehlt sie, ueberspringen wir stillschweigend.
-  const sidebarEl = root.parentElement?.querySelector<HTMLElement>('.jnr-sidebar');
+  // Scoreboard: erst auf dem Game-Over-Screen sichtbar. Wird beim Bootstrap
+  // gebaut und lazy beim ersten Game-Over gefetched.
   const scoreboard =
-    apiClient && sidebarEl && rawConfig.scoreboard?.enabled
-      ? new Scoreboard(sidebarEl, apiClient, rawConfig.scoreboard.limit)
+    apiClient && rawConfig.scoreboard?.enabled
+      ? new Scoreboard(apiClient, rawConfig.scoreboard.limit)
       : null;
   if (scoreboard) {
-    void scoreboard.refresh();
+    ui.attachScoreboard(scoreboard.element);
   }
 
   // ── Engine events ──────────────────────────────────────────────────────
@@ -392,7 +501,14 @@ export function bootstrap(root: HTMLElement, rawConfig: JumpnrunConfig = {}): vo
     const savedLevel = lastLevel;
     sessionId = null;
 
+    // Scoreboard erst beim Game-Over fetchen — spart einen Request bevor er
+    // sichtbar waere und zeigt gleich den aktuellen Stand inkl. Mitspielern.
+    if (scoreboard) {
+      void scoreboard.refresh();
+    }
+
     ui.showGameOver(score, {
+      ...(apiClient ? { onLookup: (name: string) => apiClient.lookupName(name) } : {}),
       onSave: async (name: string) => {
         if (!apiClient || !savedSession || score <= 0) {
           return null;

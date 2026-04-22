@@ -44,6 +44,17 @@ final class HighscoreRepository
         ];
     }
 
+    /** Findet den gespeicherten Score fuer einen Namen — oder null wenn unbekannt. */
+    public function findScoreByName(string $name): ?int
+    {
+        global $wpdb;
+        $table = Schema::highscoresTable();
+        $raw = $wpdb->get_var(
+            $wpdb->prepare("SELECT score FROM {$table} WHERE name = %s", $name)
+        );
+        return $raw === null ? null : (int) $raw;
+    }
+
     /** @return list<array{id:int, name:string, score:int, level:int}> */
     public function topN(int $limit = 10): array
     {

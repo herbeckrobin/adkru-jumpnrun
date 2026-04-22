@@ -6,27 +6,37 @@ export interface ScoreboardConfig {
 }
 
 /**
- * Scoreboard-Sidebar: rendert die Top-N Eintraege aus dem REST-Endpoint.
- * Wird beim Boot einmal gefetched und nach jedem eigenen Save refreshed.
- * Optionales `highlightName` hebt den frisch gespeicherten Eintrag visuell hervor.
+ * Scoreboard-Panel: baut seine eigene DOM auf und liefert sie ueber `element`.
+ * Wird im Game-Over-Overlay als rechte Spalte eingehaengt und nach jedem Save
+ * refreshed. Optionales `highlightName` hebt den eigenen Eintrag hervor.
  */
 export class Scoreboard {
+  readonly element: HTMLElement;
   private readonly listEl: HTMLOListElement;
   private readonly emptyEl: HTMLElement;
   private readonly api: ApiClient;
   private readonly limit: number;
 
-  constructor(root: HTMLElement, api: ApiClient, limit: number) {
+  constructor(api: ApiClient, limit: number) {
     this.api = api;
     this.limit = Math.max(3, Math.min(limit, 25));
 
-    const list = root.querySelector<HTMLOListElement>('ol.jnr-toplist');
-    const empty = root.querySelector<HTMLElement>('.jnr-toplist-empty');
-    if (!list || !empty) {
-      throw new Error('jumpnrun: scoreboard elements missing');
-    }
-    this.listEl = list;
-    this.emptyEl = empty;
+    this.element = document.createElement('aside');
+    this.element.className = 'jnr-sidebar';
+
+    const title = document.createElement('h3');
+    title.className = 'jnr-sidebar-title';
+    title.textContent = `Top ${this.limit}`;
+
+    this.listEl = document.createElement('ol');
+    this.listEl.className = 'jnr-toplist jnr-hidden';
+    this.listEl.setAttribute('aria-live', 'polite');
+
+    this.emptyEl = document.createElement('p');
+    this.emptyEl.className = 'jnr-toplist-empty';
+    this.emptyEl.textContent = 'Noch keine Highscores.';
+
+    this.element.append(title, this.listEl, this.emptyEl);
   }
 
   async refresh(highlightName?: string): Promise<void> {

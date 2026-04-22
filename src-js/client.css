@@ -1,37 +1,17 @@
 /* Jump-n-Run plugin styles — all classes prefixed jnr- */
 
-/* ── Layout (Canvas + Highscore-Sidebar) ────────────────────────────────── */
-
-.jnr-layout {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(240px, 300px);
-  gap: 1.5rem;
-  align-items: start;
-  max-width: 1280px;
-  margin-inline: auto;
-}
-
-.jnr-layout > #jumpnrun-root {
-  min-width: 0; /* verhindert dass Canvas das Grid sprengt */
-}
-
-@media (max-width: 980px) {
-  .jnr-layout {
-    grid-template-columns: 1fr;
-  }
-}
-
-/* ── Sidebar ────────────────────────────────────────────────────────────── */
+/* ── Scoreboard (nur im Game-Over-Overlay sichtbar) ─────────────────────── */
 
 .jnr-sidebar {
-  background: rgba(5, 10, 20, 0.86);
   color: #fff;
-  border-radius: 10px;
-  padding: 1.2rem 1rem 1.3rem;
-  box-shadow:
-    0 8px 32px rgba(0, 0, 0, 0.5),
-    0 0 0 1px rgba(255, 255, 255, 0.06);
   font-family: system-ui, -apple-system, sans-serif;
+  /* Feste Breite im Game-Over-Flexrow — sonst kollabiert der Inhalt */
+  flex: 0 0 260px;
+  width: 260px;
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 8px;
+  padding: 1rem 0.9rem;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
 }
 
 .jnr-sidebar-title {
@@ -56,19 +36,20 @@
 
 .jnr-toplist-row {
   counter-increment: jnr-rank;
-  display: grid;
-  grid-template-columns: 1.8rem 1fr auto;
-  align-items: baseline;
-  gap: 0.5rem;
-  padding: 0.45rem 0.55rem;
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.45rem 0.6rem;
   border-radius: 6px;
   font-size: 0.92rem;
+  line-height: 1.3;
   transition: background 0.2s;
 }
 
 .jnr-toplist-row::before {
   content: counter(jnr-rank);
-  color: rgba(255, 255, 255, 0.4);
+  flex: 0 0 1.6rem;
+  color: rgba(255, 255, 255, 0.45);
   font-variant-numeric: tabular-nums;
   font-size: 0.82rem;
   text-align: right;
@@ -85,13 +66,18 @@
 }
 
 .jnr-toplist-name {
-  color: rgba(255, 255, 255, 0.92);
+  flex: 1 1 auto;
+  /* min-width: 0 erlaubt Flex-Shrinking unter die Content-Breite — ohne laufen
+     lange Namen aus der Sidebar raus. */
+  min-width: 0;
+  color: #fff;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .jnr-toplist-score {
+  flex: 0 0 auto;
   color: #4fc3f7;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
@@ -158,6 +144,55 @@
   display: none !important;
 }
 
+/* Overlay ohne Verdunkelung — fuer Discount-Countdown, damit der Spieler
+   seine Figur sieht waehrend "3, 2, 1, Los!" laeuft. Alle Overlay-Kinder
+   ausser dem Countdown werden ausgeblendet, sodass nur die Zahl im Bild
+   schwebt. */
+.jnr-overlay-transparent {
+  background: transparent;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  pointer-events: none;
+}
+
+.jnr-overlay-transparent > *:not(.jnr-countdown) {
+  display: none !important;
+}
+
+/* ── Game-Over 2-Spalten-Layout ────────────────────────────────────────── */
+
+.jnr-gameover-with-toplist {
+  flex-direction: row;
+  gap: 2.5rem;
+  align-items: center;
+  justify-content: center;
+}
+
+.jnr-gameover-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.1rem;
+  flex: 0 1 320px;
+  /* Feste Maxbreite: sonst dehnen lange Summary-Texte die Spalte und quetschen
+     die Scoreboard-Spalte rechts. text-align zentriert mehrzeilige Subtitles
+     symmetrisch — ohne das wirken sie linksbuendig. */
+  max-width: 320px;
+  min-width: 0;
+  text-align: center;
+}
+
+@media (max-width: 640px) {
+  .jnr-gameover-with-toplist {
+    flex-direction: column;
+    gap: 1.25rem;
+  }
+  .jnr-gameover-with-toplist .jnr-sidebar {
+    flex: 0 1 auto;
+    width: min(280px, 100%);
+  }
+}
+
 /* ── Typography ────────────────────────────────────────────────────────── */
 
 .jnr-title {
@@ -173,11 +208,13 @@
 }
 
 .jnr-subtitle {
-  margin: -0.3rem 0 0;
+  margin: 0;
   font-size: 0.88rem;
+  line-height: 1.4;
   color: rgba(255, 255, 255, 0.5);
   text-align: center;
   letter-spacing: 0.03em;
+  max-width: 30ch;
 }
 
 .jnr-score-group {
@@ -317,14 +354,21 @@
 
 .jnr-countdown {
   margin: 0;
-  font-size: clamp(3rem, 10vw, 5rem);
+  font-size: clamp(4rem, 14vw, 7rem);
   font-weight: 900;
-  color: #4fc3f7;
+  color: #fff;
   line-height: 1;
   letter-spacing: 0.02em;
+  /* Mehrlagiger Shadow: harte schwarze Outline (4 Richtungen) fuer Kontrast
+     auf jedem Background, plus weicher Drop + farbiger Glow fuer Tiefe. */
   text-shadow:
-    0 0 40px rgba(79, 195, 247, 0.7),
-    0 0 80px rgba(79, 195, 247, 0.35);
+    -2px -2px 0 rgba(0, 0, 0, 0.95),
+    2px -2px 0 rgba(0, 0, 0, 0.95),
+    -2px 2px 0 rgba(0, 0, 0, 0.95),
+    2px 2px 0 rgba(0, 0, 0, 0.95),
+    0 4px 12px rgba(0, 0, 0, 0.85),
+    0 0 50px rgba(79, 195, 247, 0.8),
+    0 0 90px rgba(79, 195, 247, 0.45);
   font-family: ui-monospace, 'SF Mono', Menlo, Consolas, 'Courier New', monospace;
 }
 

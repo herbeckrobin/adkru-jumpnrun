@@ -36,6 +36,25 @@ export class ApiClient {
     return this.post<ScoreResult>('score', { sessionId, name, score, level });
   }
 
+  /**
+   * Prueft ob ein Name bereits in der Highscore-Liste existiert. Gibt den
+   * gespeicherten Score zurueck oder null wenn der Name frei ist. Network-
+   * Fehler werden als `null` behandelt — im Zweifel lieber submit erlauben
+   * als User blockieren.
+   */
+  async lookupName(name: string): Promise<number | null> {
+    try {
+      const url = `${this.config.root}highscore/lookup?name=${encodeURIComponent(name)}`;
+      const res = await fetch(url, { credentials: 'same-origin' });
+      if (!res.ok) return null;
+      const body = (await res.json()) as { exists: boolean; score: number | null };
+      return body.exists && typeof body.score === 'number' ? body.score : null;
+    } catch (err) {
+      console.warn('[jumpnrun] lookup failed', err);
+      return null;
+    }
+  }
+
   async getHighscores(limit = 10): Promise<HighscoreEntry[]> {
     try {
       const url = `${this.config.root}highscores?limit=${limit}`;

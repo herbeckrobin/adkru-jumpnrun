@@ -85,30 +85,12 @@ final class GameShortcode
         $json = wp_json_encode($config, JSON_HEX_TAG | JSON_HEX_AMP);
         $width = (int) $engine['canvasWidth'];
 
-        if (!$scoreboard['enabled']) {
-            // Layout bleibt wie vor v0.4 — Single-Column.
-            return sprintf(
-                '<div id="jumpnrun-root" style="max-width:%dpx;margin-inline:auto;"></div>' .
-                '<script>window.JumpnrunConfig=%s;</script>',
-                $width,
-                $json
-            );
-        }
-
-        // 2-Spalten-Layout: Canvas links, Highscore-Sidebar rechts.
-        // CSS stapelt unter 980 px automatisch.
+        // Single-Column-Layout. Das Scoreboard wird nur im Game-Over-Overlay
+        // angezeigt und vom Client selbst gebaut (siehe scoreboard.ts).
         return sprintf(
-            '<div class="jnr-layout">' .
-                '<div id="jumpnrun-root" style="max-width:%dpx;"></div>' .
-                '<aside class="jnr-sidebar">' .
-                    '<h3 class="jnr-sidebar-title">Top %d</h3>' .
-                    '<ol class="jnr-toplist jnr-hidden" aria-live="polite"></ol>' .
-                    '<p class="jnr-toplist-empty">Noch keine Highscores.</p>' .
-                '</aside>' .
-            '</div>' .
+            '<div id="jumpnrun-root" style="max-width:%dpx;margin-inline:auto;"></div>' .
             '<script>window.JumpnrunConfig=%s;</script>',
             $width,
-            (int) $scoreboard['limit'],
             $json
         );
     }

@@ -29,5 +29,12 @@ final class RestController
             'permission_callback' => '__return_true',
             'args' => HighscoreEndpoint::args(),
         ]);
+
+        register_rest_route(self::NAMESPACE, '/highscore/lookup', [
+            'methods' => 'GET',
+            'callback' => [new HighscoreLookupEndpoint(), 'handle'],
+            'permission_callback' => '__return_true',
+            'args' => HighscoreLookupEndpoint::args(),
+        ]);
     }
 }
