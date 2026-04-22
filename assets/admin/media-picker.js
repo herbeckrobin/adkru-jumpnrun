@@ -8,9 +8,7 @@
  *   die umgebende Form direkt — sonst hätte der User das Gefühl, der Klick
  *   tut nichts (er müsste danach noch "Speichern" drücken).
  */
-(function ($) {
-  'use strict';
-
+(($) => {
   function init() {
     if (!window.wp || !window.wp.media) return;
 
@@ -28,29 +26,25 @@
         multiple: false,
       });
 
-      frame.on('select', function () {
+      frame.on('select', () => {
         var attachment = frame.state().get('selection').first().toJSON();
         $input.val(attachment.id);
-        var url =
-          (attachment.sizes && attachment.sizes.thumbnail && attachment.sizes.thumbnail.url) ||
-          attachment.url;
-        $preview
-          .attr('src', url)
-          .css({
-            'max-width': '80px',
-            height: 'auto',
-            'border-radius': '4px',
-            display: 'block',
-          });
+        var url = attachment.sizes?.thumbnail?.url || attachment.url;
+        $preview.attr('src', url).css({
+          'max-width': '80px',
+          height: 'auto',
+          'border-radius': '4px',
+          display: 'block',
+        });
       });
 
       frame.open();
     });
 
     // Entfernen ist ein echter Submit-Button (type="submit" mit
-     // name="jnr_clear[<key>]") — der Browser sendet die Form nativ und der
-     // Server setzt den Slot auf 0. Wir machen hier nur sofortiges optisches
-     // Feedback (Vorschau ausblenden), Submit selbst NICHT preventDefault.
+    // name="jnr_clear[<key>]") — der Browser sendet die Form nativ und der
+    // Server setzt den Slot auf 0. Wir machen hier nur sofortiges optisches
+    // Feedback (Vorschau ausblenden), Submit selbst NICHT preventDefault.
     $(document).on('click', '[data-jnr-picker-clear]', function () {
       var $btn = $(this);
       var $wrap = $btn.closest('.jnr-attachment-picker');
