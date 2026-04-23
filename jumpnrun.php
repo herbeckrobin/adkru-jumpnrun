@@ -37,7 +37,9 @@ if (class_exists('YahnisElsts\\PluginUpdateChecker\\v5\\PucFactory')) {
         'jumpnrun'
     );
     $updateChecker->setBranch('main');
-    $updateChecker->getVcsApi()->enableReleaseAssets();
+    /** @var \YahnisElsts\PluginUpdateChecker\v5p6\Vcs\GitHubApi $vcsApi */
+    $vcsApi = $updateChecker->getVcsApi();
+    $vcsApi->enableReleaseAssets();
 }
 
 add_action('plugins_loaded', static function (): void {
