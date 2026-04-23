@@ -12,9 +12,14 @@ use WP_Error;
 use WP_REST_Request;
 use WP_REST_Response;
 
+/** POST /score — validiert Session, speichert Highscore und liefert den neuen Rang zurueck. */
 final class ScoreEndpoint
 {
-    /** @return array<string, array<string, mixed>> */
+    /**
+     * Argument-Specs mit UUID-Check, Score- und Level-Ranges.
+     *
+     * @return array<string, array<string, mixed>>
+     */
     public static function args(): array
     {
         return [
@@ -41,6 +46,7 @@ final class ScoreEndpoint
         ];
     }
 
+    /** Fuehrt den Session-Close + Highscore-Upsert atomar durch und liefert Rank + personalBest. */
     public function handle(WP_REST_Request $request): WP_REST_Response|WP_Error
     {
         $limits = ConfigService::antiCheatLimits();
@@ -89,6 +95,7 @@ final class ScoreEndpoint
         ], 200);
     }
 
+    /** Erlaubt nur Unicode-Buchstaben, Ziffern, Space, Bindestrich und Unterstrich; kuerzt auf maxLen. */
     public static function sanitizeName(string $raw, int $maxLen): string
     {
         $clean = preg_replace('/[^\p{L}\p{N} _-]/u', '', $raw) ?? '';

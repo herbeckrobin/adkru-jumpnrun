@@ -8,12 +8,14 @@ import { Scoreboard, type ScoreboardConfig } from './scoreboard.ts';
 
 // ── Public config interface (set via window.JumpnrunConfig in WP) ─────────
 
+/** Aus den CPT-Pools eingelesene Assets — pro Kategorie eine Liste oder Map. */
 export interface AssetPools {
   backgrounds: BackgroundPool;
   obstacles: readonly ObstacleSpec[];
   platforms: readonly PlatformSpec[];
 }
 
+/** Bootstrap-Konfiguration fuer das Plugin, kommt via window.JumpnrunConfig aus PHP. */
 export interface JumpnrunConfig {
   /** Key → absolute URL for each sprite. Missing keys fall back to solid colors. */
   images?: Record<string, string>;
@@ -49,6 +51,7 @@ interface GameOverHandlers {
 
 const LAST_NAME_KEY = 'jumpnrun:lastName';
 
+/** Baut das DOM-UI um den Canvas herum — Start-, Game-Over- und Discount-Overlays. */
 class GameUI {
   readonly canvas: HTMLCanvasElement;
 
@@ -104,6 +107,7 @@ class GameUI {
     );
   }
 
+  /** Zeigt das Start-Overlay und ruft onStart beim Klick auf den Start-Button. */
   showStart(onStart: () => void): void {
     this.startOverlay.classList.remove('jnr-hidden');
     this.startBtn.onclick = () => {
@@ -132,10 +136,12 @@ class GameUI {
     this.renderGameOverInitial(score, handlers, suggested);
   }
 
+  /** Versteckt das Game-Over-Overlay. */
   hideGameOver(): void {
     this.gameOverOverlay.classList.add('jnr-hidden');
   }
 
+  /** Zeigt das Rabattcode-Popup und startet nach Bestaetigung den Countdown zurueck ins Spiel. */
   showDiscount(code: string, onClose: () => void): void {
     this.discountCodeEl.textContent = code;
     this.discountPopup.classList.remove('jnr-hidden');
@@ -411,6 +417,7 @@ function hasDebugUrlParam(): boolean {
 
 // ── Bootstrap ─────────────────────────────────────────────────────────────
 
+/** Initialisiert Engine, Renderer, UI und API-Client im uebergebenen Root-Container. */
 export function bootstrap(root: HTMLElement, rawConfig: JumpnrunConfig = {}): void {
   if (root.dataset.jnrBooted) return;
   root.dataset.jnrBooted = '1';

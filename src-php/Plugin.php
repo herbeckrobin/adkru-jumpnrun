@@ -15,10 +15,12 @@ use Jumpnrun\Db\Schema;
 use Jumpnrun\Shortcode\GameShortcode;
 use Jumpnrun\Shortcode\ScoreboardShortcode;
 
+/** Zentraler Einstiegspunkt des Plugins — verdrahtet Hooks, CPTs, Admin und Shortcodes. */
 final class Plugin
 {
     private static ?self $instance = null;
 
+    /** Singleton-Start: initialisiert das Plugin genau einmal pro Request. */
     public static function boot(): self
     {
         if (self::$instance === null) {
@@ -48,6 +50,7 @@ final class Plugin
         }
     }
 
+    /** Registriert die Public-Shortcodes fuer Spiel und Scoreboard. */
     public function registerShortcodes(): void
     {
         (new GameShortcode())->register();

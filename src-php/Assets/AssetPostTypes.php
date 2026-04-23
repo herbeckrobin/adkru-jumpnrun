@@ -21,11 +21,13 @@ final class AssetPostTypes
     public const OBSTACLE = 'jnr_obstacle';
     public const PLATFORM = 'jnr_platform';
 
+    /** Verdrahtet den init-Hook fuer die CPT-Registrierung. */
     public function register(): void
     {
         add_action('init', [$this, 'registerTypes']);
     }
 
+    /** Registriert die drei Asset-CPTs (Background, Obstacle, Platform). */
     public function registerTypes(): void
     {
         register_post_type(self::BACKGROUND, [

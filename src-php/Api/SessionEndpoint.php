@@ -10,8 +10,10 @@ use Jumpnrun\Db\SessionRepository;
 use WP_Error;
 use WP_REST_Response;
 
+/** POST /session — legt eine neue Spielsession an und erzwingt IP-Rate-Limit. */
 final class SessionEndpoint
 {
+    /** Erzeugt eine Session oder liefert 429 wenn das Rate-Limit greift. */
     public function handle(): WP_REST_Response|WP_Error
     {
         $limits = ConfigService::antiCheatLimits();

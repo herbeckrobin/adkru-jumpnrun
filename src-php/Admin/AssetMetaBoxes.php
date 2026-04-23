@@ -19,6 +19,7 @@ final class AssetMetaBoxes
     private const NONCE_FIELD = 'jnr_asset_meta_nonce';
     private const NONCE_ACTION = 'jnr_save_asset_meta';
 
+    /** Haengt Meta-Box-Registrierung und Save-Handler an die WP-Hooks. */
     public function register(): void
     {
         add_action('add_meta_boxes', [$this, 'addMetaBoxes']);
@@ -27,6 +28,7 @@ final class AssetMetaBoxes
         add_action('save_post_' . AssetPostTypes::PLATFORM, [$this, 'savePlatform'], 10, 2);
     }
 
+    /** Legt die Meta-Boxes fuer Background-, Obstacle- und Platform-CPT an. */
     public function addMetaBoxes(): void
     {
         // 'normal'/'high' = Hauptspalte, oberhalb. Sonst klebt alles in der
@@ -60,6 +62,7 @@ final class AssetMetaBoxes
         );
     }
 
+    /** Rendert Level + Gewichtung fuer Hintergrund-Assets. */
     public function renderBackgroundBox(WP_Post $post): void
     {
         wp_nonce_field(self::NONCE_ACTION, self::NONCE_FIELD);
@@ -93,6 +96,7 @@ final class AssetMetaBoxes
         <?php
     }
 
+    /** Rendert Collision-Box, Min-Level und Gewichtung fuer Hindernisse. */
     public function renderObstacleBox(WP_Post $post): void
     {
         wp_nonce_field(self::NONCE_ACTION, self::NONCE_FIELD);
@@ -144,6 +148,7 @@ final class AssetMetaBoxes
         <?php
     }
 
+    /** Rendert Abmessungen und Gewichtung fuer Plattform-Assets. */
     public function renderPlatformBox(WP_Post $post): void
     {
         wp_nonce_field(self::NONCE_ACTION, self::NONCE_FIELD);
@@ -184,6 +189,7 @@ final class AssetMetaBoxes
         <?php
     }
 
+    /** Persistiert Background-Meta mit Range-Clamp. */
     public function saveBackground(int $postId, WP_Post $post): void
     {
         if (!$this->canSave($postId)) {
@@ -198,6 +204,7 @@ final class AssetMetaBoxes
         AssetRepository::clearCache();
     }
 
+    /** Persistiert Obstacle-Meta mit Range-Clamp. */
     public function saveObstacle(int $postId, WP_Post $post): void
     {
         if (!$this->canSave($postId)) {
@@ -218,6 +225,7 @@ final class AssetMetaBoxes
         AssetRepository::clearCache();
     }
 
+    /** Persistiert Platform-Meta mit Range-Clamp. */
     public function savePlatform(int $postId, WP_Post $post): void
     {
         if (!$this->canSave($postId)) {

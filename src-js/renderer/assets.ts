@@ -1,6 +1,8 @@
 import type { SpriteMask } from '../engine/types.ts';
 
+/** Sprite-Key → geladenes Image-Element. */
 export type ImageMap = Map<string, HTMLImageElement>;
+/** Sprite-Key → zugehoerige Pixel-Alpha-Maske fuer praezise Hitboxen. */
 export type MaskMap = Map<string, SpriteMask>;
 
 /** Alpha threshold (0-255) for a pixel to count as solid in the hitbox mask. */
@@ -89,6 +91,7 @@ function buildMask(img: HTMLImageElement): SpriteMask | null {
  * Images that fail to load are silently skipped; sprites whose masks can't be
  * built (CORS-tainted etc.) just won't get a mask and fall back to AABB.
  */
+/** Laed alle Bilder parallel und baut pro Bild eine Alpha-Maske fuer die pixelgenaue Hitbox. */
 export async function loadImages(
   entries: Record<string, string>,
 ): Promise<{ images: ImageMap; masks: MaskMap }> {

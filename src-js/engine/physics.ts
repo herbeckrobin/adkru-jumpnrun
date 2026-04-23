@@ -61,6 +61,7 @@ function masksOverlap(a: Maskable, b: Maskable): boolean {
  * Player vs. obstacle. Broadphase: AABB with `buffer` px inset on both rects
  * (forgiving). Narrowphase: per-pixel mask overlap if both sprites have masks.
  */
+/** Kollisionstest Spieler/Hindernis mit AABB-Broadphase + Pixelmasken-Narrowphase. */
 export function playerHitsObstacle(player: Maskable, obstacle: Maskable, buffer: number): boolean {
   const p: Maskable = { ...fitRect(player, player.mask), mask: player.mask };
   const o: Maskable = { ...fitRect(obstacle, obstacle.mask), mask: obstacle.mask };
@@ -72,12 +73,14 @@ export function playerHitsObstacle(player: Maskable, obstacle: Maskable, buffer:
  * Player vs. coin. Coins are small and roughly circular — pure AABB with a
  * `magnet` inset (negative = grows coin rect, easier to pick up) is plenty.
  */
+/** Kollisionstest Spieler/Coin — reiner AABB-Check mit Magnet-Puffer. */
 export function playerHitsCoin(player: Maskable, coin: Maskable, magnet: number): boolean {
   const p = fitRect(player, player.mask);
   const c = fitRect(coin, coin.mask);
   return aabbOverlap(p, c, 0, -magnet);
 }
 
+/** True wenn der Spieler mit Abwaertsgeschwindigkeit auf der Plattform-Oberkante aufsetzt. */
 export function playerLandsOnPlatform(player: Rect, velocityY: number, platform: Rect): boolean {
   const playerBottom = player.y + player.height;
   return (

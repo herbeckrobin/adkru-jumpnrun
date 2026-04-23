@@ -25,7 +25,11 @@ final class ConfigService
         self::$cache = null;
     }
 
-    /** @return array<string, int|float|string|bool> */
+    /**
+     * Merged und gecachte Gesamtkonfiguration — Defaults + DB-Werte + JSON-Override.
+     *
+     * @return array<string, int|float|string|bool>
+     */
     public static function getConfig(): array
     {
         if (self::$cache !== null) {

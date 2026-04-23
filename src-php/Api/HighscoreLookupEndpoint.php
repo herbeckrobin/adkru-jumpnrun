@@ -16,7 +16,11 @@ use WP_REST_Response;
  */
 final class HighscoreLookupEndpoint
 {
-    /** @return array<string, array<string, mixed>> */
+    /**
+     * REST-Argument-Specs fuer den Lookup — name ist Pflicht.
+     *
+     * @return array<string, array<string, mixed>>
+     */
     public static function args(): array
     {
         return [
@@ -27,6 +31,7 @@ final class HighscoreLookupEndpoint
         ];
     }
 
+    /** Liefert exists + gespeicherten Score fuer einen bereits vorhandenen Namen. */
     public function handle(WP_REST_Request $request): WP_REST_Response
     {
         $raw = (string) $request->get_param('name');

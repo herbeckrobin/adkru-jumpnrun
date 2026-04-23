@@ -3,6 +3,7 @@ import { weightedPick } from '../engine/spawner.ts';
 import type { BackgroundPool, GameState, SpriteMask } from '../engine/types.ts';
 import type { ImageMap, MaskMap } from './assets.ts';
 
+/** Schaltet Hitbox-Visualisierung zur Laufzeit ein und spiegelt die Engine-Puffer. */
 export interface DebugOptions {
   /** Draw collision hitboxes + solid mask pixels over everything. */
   enabled: boolean;
@@ -31,6 +32,7 @@ const FALLBACK: Record<string, string> = {
   'platform-fallback': '#78909c',
 };
 
+/** Zeichnet den Game-State auf ein 2D-Canvas inkl. HUD, Banner und Debug-Overlay. */
 export class CanvasRenderer {
   debug: DebugOptions = { enabled: false, hitboxBuffer: 0, coinMagnet: 0 };
   private masks: MaskMap = new Map();
@@ -43,6 +45,7 @@ export class CanvasRenderer {
     private readonly height: number,
   ) {}
 
+  /** Aktualisiert die Pixelmasken — wird nach dem asynchronen Bild-Preload gesetzt. */
   setMasks(masks: MaskMap): void {
     this.masks = masks;
   }
@@ -77,6 +80,7 @@ export class CanvasRenderer {
     return null;
   }
 
+  /** Zeichnet einen Frame: Hintergrund, Plattformen, Spieler, Hindernisse, Coins, HUD, Overlays. */
   render(state: GameState, images: ImageMap): void {
     const { ctx, width, height } = this;
     ctx.clearRect(0, 0, width, height);

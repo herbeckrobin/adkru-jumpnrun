@@ -18,6 +18,7 @@ use WP_Query;
  */
 final class AssetAdminColumns
 {
+    /** Haengt alle Column-Filter und den Sorting-Handler fuer die drei Asset-CPTs ein. */
     public function register(): void
     {
         // Background-Tabelle

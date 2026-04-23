@@ -16,6 +16,7 @@ final class ScoreboardPage
     private const DELETE_NONCE = 'jumpnrun_delete_score';
     private const BULK_NONCE = 'jumpnrun_bulk_delete';
 
+    /** Verarbeitet Delete-Aktionen und rendert die Admin-Highscore-Tabelle. */
     public function render(): void
     {
         if (!current_user_can('manage_options')) {

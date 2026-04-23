@@ -25,7 +25,11 @@ namespace Jumpnrun\Config;
  */
 final class ConfigSchema
 {
-    /** @return array<string, array{label:string, fields: array<string, array<string, mixed>>}> */
+    /**
+     * Liefert alle Sections mit ihren Feld-Specs — Grundlage fuer Admin-UI und Validierung.
+     *
+     * @return array<string, array{label:string, fields: array<string, array<string, mixed>>}>
+     */
     public static function all(): array
     {
         return [
@@ -110,7 +114,11 @@ final class ConfigSchema
         ];
     }
 
-    /** @return array<string, int|float|string|bool> */
+    /**
+     * Flache Default-Map aller Felder — wird beim ersten Laden in die DB geschrieben.
+     *
+     * @return array<string, int|float|string|bool>
+     */
     public static function defaults(): array
     {
         $out = [];
@@ -122,7 +130,11 @@ final class ConfigSchema
         return $out;
     }
 
-    /** @return array<string, array<string, mixed>> */
+    /**
+     * Flache Map Feld-Key → Spec, nuetzlich fuer Validierung eines einzelnen Keys.
+     *
+     * @return array<string, array<string, mixed>>
+     */
     public static function fieldMap(): array
     {
         $out = [];

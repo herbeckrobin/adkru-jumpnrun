@@ -4,11 +4,13 @@ declare(strict_types=1);
 
 namespace Jumpnrun\Admin;
 
+/** Baut das Top-Level-Menu "Jump-n-Run" mit Submenus fuer Einstellungen, Spiel-Assets und Highscores. */
 final class AdminMenu
 {
     public const SLUG = 'jumpnrun';
     public const SCOREBOARD_SLUG = 'jumpnrun_scoreboard';
 
+    /** Haengt Menu-Registrierung und Asset-Enqueue an die passenden WP-Hooks. */
     public function register(): void
     {
         add_action('admin_menu', [$this, 'addMenu']);
@@ -16,6 +18,7 @@ final class AdminMenu
         add_action('admin_enqueue_scripts', [$this, 'enqueueAssets']);
     }
 
+    /** Legt Top-Level-Menu und Submenu-Seiten an. */
     public function addMenu(): void
     {
         $settings = new SettingsPage();

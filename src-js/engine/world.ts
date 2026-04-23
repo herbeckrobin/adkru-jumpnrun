@@ -17,6 +17,7 @@ import type {
 /** Frames the "Level X" banner stays visible (2 s at 60 Hz). */
 const LEVEL_TEXT_FRAMES = 120;
 
+/** Haelt den kompletten Spielzustand und verarbeitet pro Fixed-Step-Tick die Logik. */
 export class GameWorld {
   readonly events = new EventBus();
 
@@ -52,6 +53,7 @@ export class GameWorld {
 
   // ── Public read ──────────────────────────────────────────────────────────
 
+  /** Liefert einen defensiv kopierten Snapshot des aktuellen Spielstands. */
   get state(): GameState {
     return {
       status: this._status,
@@ -68,16 +70,19 @@ export class GameWorld {
 
   // ── Public commands ──────────────────────────────────────────────────────
 
+  /** Startet eine neue Partie — setzt State zurueck und geht in running. */
   start(): void {
     this.reset();
     this._status = 'running';
   }
 
+  /** Restart nach Game-Over — identisch zu start, nur eigener Name fuer Lesbarkeit. */
   restart(): void {
     this.reset();
     this._status = 'running';
   }
 
+  /** Loest einen Sprung aus, solange das Jump-Budget reicht und das Spiel laeuft. */
   jump(): void {
     if (this._status !== 'running') return;
     if (this._player.jumpCount >= this.cfg.maxJumps) return;
@@ -87,10 +92,12 @@ export class GameWorld {
     this.events.emit('jump', undefined);
   }
 
+  /** Haelt das Spiel an, ohne den Zustand zu verwerfen. */
   pause(): void {
     if (this._status === 'running') this._status = 'paused';
   }
 
+  /** Setzt ein pausiertes Spiel fort — z.B. nach dem Rabattcode-Popup. */
   resume(): void {
     if (this._status === 'paused') this._status = 'running';
   }
@@ -107,6 +114,7 @@ export class GameWorld {
 
   // ── Fixed-step update (called by GameLoop at dt = 1/60) ──────────────────
 
+  /** Fixed-Step-Update — Spawning, Physik, Kollisionen, Level-Logic. Vom GameLoop gerufen. */
   update(_dt: number): void {
     if (this._status !== 'running') return;
 

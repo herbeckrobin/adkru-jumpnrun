@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 namespace Jumpnrun\Api;
 
+/** Registriert alle REST-Routen unter dem Namespace jumpnrun/v1. */
 final class RestController
 {
     public const NAMESPACE = 'jumpnrun/v1';
 
+    /** Haengt die Endpoint-Handler an die REST-API. */
     public function registerRoutes(): void
     {
         register_rest_route(self::NAMESPACE, '/session', [

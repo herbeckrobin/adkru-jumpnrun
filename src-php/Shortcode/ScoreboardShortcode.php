@@ -6,16 +6,20 @@ namespace Jumpnrun\Shortcode;
 
 use Jumpnrun\Db\HighscoreRepository;
 
+/** Rendert die Highscore-Tabelle als [jumpnrun_scoreboard]-Shortcode. */
 final class ScoreboardShortcode
 {
     public const TAG = 'jumpnrun_scoreboard';
 
+    /** Registriert den Shortcode bei WordPress. */
     public function register(): void
     {
         add_shortcode(self::TAG, [$this, 'render']);
     }
 
     /**
+     * Rendert die Top-N-Liste als HTML-Tabelle.
+     *
      * @param array<string, mixed>|string $atts
      */
     public function render(array|string $atts = []): string

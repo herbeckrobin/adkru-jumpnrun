@@ -16,6 +16,7 @@ final class SettingsPage
 {
     private const OPTION_GROUP = 'jumpnrun_settings_group';
 
+    /** Registriert die Option bei WordPress inklusive Sanitize-Callback. */
     public function registerSettings(): void
     {
         register_setting(
@@ -29,7 +30,11 @@ final class SettingsPage
         );
     }
 
-    /** @param mixed $input */
+    /**
+     * Schema-gesteuerte Validierung + Range-Clamp beim Speichern, inklusive Cache-Invalidation.
+     *
+     * @param mixed $input
+     */
     public function sanitize($input): array
     {
         if (!is_array($input)) {
@@ -61,6 +66,7 @@ final class SettingsPage
         return $out;
     }
 
+    /** Rendert die Settings-Seite im wp-admin. */
     public function render(): void
     {
         if (!current_user_can('manage_options')) {

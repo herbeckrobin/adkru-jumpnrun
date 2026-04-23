@@ -8,16 +8,19 @@ use Jumpnrun\Api\RestController;
 use Jumpnrun\Assets\AssetRepository;
 use Jumpnrun\Config\ConfigService;
 
+/** Rendert den Spiel-Canvas samt Config-Bootstrap fuer [jumpnrun]. */
 final class GameShortcode
 {
     public const TAG = 'jumpnrun';
 
+    /** Registriert Shortcode und Enqueue-Hook. */
     public function register(): void
     {
         add_shortcode(self::TAG, [$this, 'render']);
         add_action('wp_enqueue_scripts', [$this, 'maybeEnqueue']);
     }
 
+    /** Laed Client-Skript und CSS nur auf Seiten die den Shortcode enthalten. */
     public function maybeEnqueue(): void
     {
         global $post;
@@ -35,6 +38,8 @@ final class GameShortcode
     }
 
     /**
+     * Baut die Game-Config (Engine, Sprites, Asset-Pools, API) und gibt den Root-Container als HTML zurueck.
+     *
      * @param array<string, mixed>|string $atts
      */
     public function render(array|string $atts = []): string

@@ -27,6 +27,7 @@ final class Schema
         }
     }
 
+    /** Erstellt oder aktualisiert die Plugin-Tabellen via dbDelta. */
     public static function install(): void
     {
         global $wpdb;
@@ -64,12 +65,14 @@ final class Schema
         update_option('jumpnrun_schema_version', self::VERSION);
     }
 
+    /** Voller Tabellenname der Highscores-Tabelle inklusive WP-Prefix. */
     public static function highscoresTable(): string
     {
         global $wpdb;
         return $wpdb->prefix . self::HIGHSCORES;
     }
 
+    /** Voller Tabellenname der Sessions-Tabelle inklusive WP-Prefix. */
     public static function sessionsTable(): string
     {
         global $wpdb;

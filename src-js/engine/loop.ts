@@ -4,6 +4,7 @@
  */
 const FIXED_DT = 1 / 60;
 
+/** Fixed-Timestep-Loop — trennt Physik (60 Hz) sauber vom Render-Rhythmus. */
 export class GameLoop {
   private accumulator = 0;
   private lastTime = 0;
@@ -15,6 +16,7 @@ export class GameLoop {
     private readonly onRender: () => void,
   ) {}
 
+  /** Startet den Loop via requestAnimationFrame — idempotent bei Doppelaufruf. */
   start(): void {
     if (this.running) return;
     this.running = true;
@@ -23,6 +25,7 @@ export class GameLoop {
     this.rafId = requestAnimationFrame(this.tick);
   }
 
+  /** Stoppt den Loop und cancelt ausstehende Frames. */
   stop(): void {
     this.running = false;
     if (this.rafId !== null) {

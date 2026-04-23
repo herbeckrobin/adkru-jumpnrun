@@ -83,6 +83,7 @@ final class AssetListTable extends \WP_List_Table
         return $views;
     }
 
+    /** Baut die WP_Query fuer die aktuelle Seite inkl. Status-Filter, Suche und Sortierung. */
     public function prepare_items(): void
     {
         $columns = $this->get_columns();

@@ -38,11 +38,13 @@ final class AssetsPage
         'coinSprite',
     ];
 
+    /** Haengt den Submit-Handler fuer den Sprites-Tab ein. */
     public function register(): void
     {
         add_action('admin_post_' . self::SAVE_SPRITES_ACTION, [$this, 'handleSpritesSubmit']);
     }
 
+    /** Rendert die Haupt-Admin-Seite mit Tab-Navigation und dem jeweils aktiven Tab. */
     public function render(): void
     {
         if (!current_user_can('edit_posts')) {
@@ -396,6 +398,7 @@ final class AssetsPage
         echo '</form>';
     }
 
+    /** Persistiert die im Sprites-Tab gewaehlten Attachment-IDs inklusive "Entfernen"-Handling. */
     public function handleSpritesSubmit(): void
     {
         check_admin_referer(self::SAVE_SPRITES_ACTION);

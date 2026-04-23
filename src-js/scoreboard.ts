@@ -1,5 +1,6 @@
 import type { ApiClient, HighscoreEntry } from './api-client.ts';
 
+/** Steuert Sichtbarkeit und Laenge der Top-Liste neben dem Canvas. */
 export interface ScoreboardConfig {
   enabled: boolean;
   limit: number;
@@ -39,6 +40,7 @@ export class Scoreboard {
     this.element.append(title, this.listEl, this.emptyEl);
   }
 
+  /** Laed die aktuelle Liste via API und rendert sie neu, optional mit markiertem Eigennamen. */
   async refresh(highlightName?: string): Promise<void> {
     const entries = await this.api.getHighscores(this.limit);
     this.render(entries, highlightName);

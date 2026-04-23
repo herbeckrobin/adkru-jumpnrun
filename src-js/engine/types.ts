@@ -1,3 +1,4 @@
+/** Axis-aligned Bounding Box — Basis fuer alle sichtbaren Objekte. */
 export interface Rect {
   x: number;
   y: number;
@@ -20,6 +21,7 @@ export interface SpriteMask {
   readonly mask: Uint8Array;
 }
 
+/** Die Spielfigur mit Sprung-State und optionaler Pixelmaske. */
 export interface Player extends Rect {
   velocityY: number;
   jumpCount: number;
@@ -27,16 +29,19 @@ export interface Player extends Rect {
   mask?: SpriteMask | undefined;
 }
 
+/** Ein laufendes Hindernis im Spielfeld. */
 export interface Obstacle extends Rect {
   imageKey: string;
   mask?: SpriteMask | undefined;
 }
 
+/** Ein einzelner Coin im Spielfeld. */
 export interface Coin extends Rect {
   collected: boolean;
   mask?: SpriteMask | undefined;
 }
 
+/** Eine begehbare Plattform im Spielfeld. */
 export interface Platform extends Rect {
   imageKey: string;
 }
@@ -71,8 +76,10 @@ export interface PlatformSpec {
   weight: number;
 }
 
+/** Status-Machine des Spiels — idle bis gameover. */
 export type GameStatus = 'idle' | 'running' | 'paused' | 'gameover';
 
+/** Immutable Snapshot des aktuellen Spielstands fuer den Renderer. */
 export interface GameState {
   readonly status: GameStatus;
   readonly player: Readonly<Player>;

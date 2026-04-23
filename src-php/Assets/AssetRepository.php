@@ -32,7 +32,11 @@ final class AssetRepository
     private const CACHE_KEY = 'jumpnrun_asset_pools';
     private const CACHE_TTL = 5 * MINUTE_IN_SECONDS;
 
-    /** @return array{backgrounds: array<string, list<array{url:string,weight:int}>>, obstacles: list<array{url:string,width:int,height:int,minLevel:int,weight:int}>, platforms: list<array{url:string,width:int,height:int,weight:int}>} */
+    /**
+     * Liefert die gecachten Pool-Daten fuer Shortcode und Admin.
+     *
+     * @return array{backgrounds: array<string, list<array{url:string,weight:int}>>, obstacles: list<array{url:string,width:int,height:int,minLevel:int,weight:int}>, platforms: list<array{url:string,width:int,height:int,weight:int}>}
+     */
     public static function pools(): array
     {
         $cached = get_transient(self::CACHE_KEY);
@@ -51,6 +55,7 @@ final class AssetRepository
         return $pools;
     }
 
+    /** Loescht den Transient-Cache — nach CPT-Save oder Seed-Lauf aufrufen. */
     public static function clearCache(): void
     {
         delete_transient(self::CACHE_KEY);

@@ -4,9 +4,10 @@ declare(strict_types=1);
 
 namespace Jumpnrun\Db;
 
+/** Verwaltet Spiel-Sessions — Lebenszyklus active → submitted mit Min-Dauer-Check. */
 final class SessionRepository
 {
-    /** UUIDv4 als Session-ID. */
+    /** Legt eine neue Session an und liefert die UUIDv4 zurueck. */
     public function create(string $ipHash): string
     {
         global $wpdb;

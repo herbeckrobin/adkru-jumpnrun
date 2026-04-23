@@ -1,6 +1,7 @@
 import type { GameConfig } from './config/index.ts';
 import type { Coin, Obstacle, ObstacleSpec, Platform, PlatformSpec, SpriteMask } from './types.ts';
 
+/** Erzeugt Hindernisse, Coins und Plattformen aus den Asset-Pools mit gewichtetem Random. */
 export class Spawner {
   private masks: ReadonlyMap<string, SpriteMask> = new Map();
 
@@ -10,6 +11,7 @@ export class Spawner {
     private readonly platformPool: readonly PlatformSpec[] = [],
   ) {}
 
+  /** Reicht die geladenen Pixelmasken durch — fuer pixelgenaue Hitbox-Kollision. */
   setMasks(masks: ReadonlyMap<string, SpriteMask>): void {
     this.masks = masks;
   }
@@ -48,6 +50,7 @@ export class Spawner {
     };
   }
 
+  /** Zeit in ms bis zum naechsten Obstacle-Spawn, skaliert mit dem Level-Tempo. */
   obstacleDelay(level: number): number {
     const speed = this.cfg.baseSpeed + level * this.cfg.speedPerLevel;
     const minTime = (220 / speed) * (1000 / 60); // ms to travel 220 px
@@ -98,6 +101,7 @@ export class Spawner {
     return false;
   }
 
+  /** Zeit in ms bis zum naechsten Coin-Spawn (600 bis 1800 ms, random). */
   coinDelay(): number {
     return 600 + Math.random() * 1200;
   }
@@ -131,6 +135,7 @@ export class Spawner {
     });
   }
 
+  /** Erzeugt einen Coin mittig ueber der uebergebenen Plattform. */
   platformCoin(platform: Platform): Coin {
     return {
       x: platform.x + platform.width / 2 - 16,
@@ -142,6 +147,7 @@ export class Spawner {
     };
   }
 
+  /** Liefert die Maske der Spielfigur, akzeptiert drei Key-Varianten (player / player-idle / player-jump). */
   playerMask(): SpriteMask | undefined {
     // Accept several key conventions so WP-side sprite naming stays flexible.
     return (

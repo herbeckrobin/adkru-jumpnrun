@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Jumpnrun\Db;
 
+/** Liest und schreibt Highscores — Top-Liste, Upsert pro Name, Rang-Berechnung. */
 final class HighscoreRepository
 {
     /**
@@ -55,7 +56,11 @@ final class HighscoreRepository
         return $raw === null ? null : (int) $raw;
     }
 
-    /** @return list<array{id:int, name:string, score:int, level:int}> */
+    /**
+     * Liefert die Top-Liste sortiert nach Score absteigend, Gleichstand nach Alter.
+     *
+     * @return list<array{id:int, name:string, score:int, level:int}>
+     */
     public function topN(int $limit = 10): array
     {
         global $wpdb;
@@ -116,6 +121,7 @@ final class HighscoreRepository
         return $ahead + 1;
     }
 
+    /** Loescht einen Eintrag per ID und gibt true zurueck wenn genau eine Zeile weg ist. */
     public function delete(int $id): bool
     {
         global $wpdb;

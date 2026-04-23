@@ -71,11 +71,13 @@ final class AssetSeeder
         ['slug' => 'coin', 'title' => 'Coin', 'settingKey' => 'coinSprite'],
     ];
 
+    /** Haengt den Form-Submit-Handler fuer den Seed-Button ein. */
     public function register(): void
     {
         add_action('admin_post_' . self::ACTION, [$this, 'handleAdminPost']);
     }
 
+    /** True wenn der Seed schon mindestens einmal durchgelaufen ist. */
     public static function isSeeded(): bool
     {
         return get_option(self::FLAG) === '1';
@@ -85,6 +87,7 @@ final class AssetSeeder
      * Form-Submit von der Settings-Seite. Nonce + Capability prüfen,
      * Seed laufen lassen, mit Status zurück redirecten.
      */
+    /** Verarbeitet den Seed-Button, redirected mit Ergebnis-Parameter zurueck. */
     public function handleAdminPost(): void
     {
         check_admin_referer(self::ACTION);
@@ -107,6 +110,7 @@ final class AssetSeeder
      *
      * @return int Anzahl tatsächlich neu angelegter CPT-Posts (0 wenn bereits geseedet).
      */
+    /** Fuehrt den eigentlichen Import von Default-Sprites und CPT-Posts aus. */
     public function doSeed(): int
     {
         require_once ABSPATH . 'wp-admin/includes/file.php';

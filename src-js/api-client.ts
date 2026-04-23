@@ -1,8 +1,10 @@
+/** REST-API-Wurzel und WP-Nonce — kommen aus dem GameShortcode als Bootstrap. */
 export interface ApiConfig {
   root: string;
   nonce: string;
 }
 
+/** Antwort des /score-Endpoints mit Rank, personalBest und gespeichertem Score. */
 export interface ScoreResult {
   rank: number;
   personalBest: boolean;
@@ -12,6 +14,7 @@ export interface ScoreResult {
   name: string;
 }
 
+/** Ein einzelner Eintrag in der Top-Liste. */
 export interface HighscoreEntry {
   id: number;
   name: string;
@@ -19,14 +22,17 @@ export interface HighscoreEntry {
   level: number;
 }
 
+/** Duenner Wrapper um die Plugin-REST-API mit Nonce-Handling und Silent-Fail. */
 export class ApiClient {
   constructor(private readonly config: ApiConfig) {}
 
+  /** Legt eine neue Session an und liefert deren UUID zurueck. */
   async startSession(): Promise<string | null> {
     const res = await this.post<{ sessionId: string }>('session', {});
     return res?.sessionId ?? null;
   }
 
+  /** Schliesst die Session und uebermittelt den finalen Score. */
   async submitScore(
     sessionId: string,
     name: string,
@@ -55,6 +61,7 @@ export class ApiClient {
     }
   }
 
+  /** Laed die aktuelle Top-Liste, bei Fehler leeres Array. */
   async getHighscores(limit = 10): Promise<HighscoreEntry[]> {
     try {
       const url = `${this.config.root}highscores?limit=${limit}`;
