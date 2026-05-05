@@ -121,6 +121,38 @@ final class HighscoreRepository
         return $ahead + 1;
     }
 
+    /**
+     * Vorschau-Rang fuer einen Score, der noch nicht gespeichert wurde.
+     * Anders als `rankOf`: kein Name-Tie-Breaker — bei Gleichstand wuerde
+     * der neue Eintrag der juengste sein und damit eine Position weiter
+     * hinten landen. Diese Methode liefert den **best moeglichen** Rang.
+     *
+     * Benoetigt fuer "Du bist Platz X" direkt nach Game-Over, bevor der
+     * Spieler entscheidet ob er speichern moechte.
+     */
+    public function previewRankFor(int $score): int
+    {
+        global $wpdb;
+        $table = Schema::highscoresTable();
+
+        $ahead = (int) $wpdb->get_var(
+            $wpdb->prepare(
+                "SELECT COUNT(*) FROM {$table} WHERE score > %d",
+                $score
+            )
+        );
+
+        return $ahead + 1;
+    }
+
+    /** Gesamtzahl Eintraege — fuer "Platz 47 von 200" Anzeigen. */
+    public function totalEntries(): int
+    {
+        global $wpdb;
+        $table = Schema::highscoresTable();
+        return (int) $wpdb->get_var("SELECT COUNT(*) FROM {$table}");
+    }
+
     /** Loescht einen Eintrag per ID und gibt true zurueck wenn genau eine Zeile weg ist. */
     public function delete(int $id): bool
     {

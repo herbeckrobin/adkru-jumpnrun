@@ -18,6 +18,9 @@ final class GameShortcode
     {
         add_shortcode(self::TAG, [$this, 'render']);
         add_action('wp_enqueue_scripts', [$this, 'maybeEnqueue']);
+        // Level-1-Hintergruende parallel zum JS-Bundle preloaden — verkuerzt
+        // die wahrgenommene Ladezeit messbar wenn Bilder gross sind.
+        add_action('wp_head', [$this, 'maybePreloadHeroAssets'], 5);
     }
 
     /** Laed Client-Skript und CSS nur auf Seiten die den Shortcode enthalten. */
@@ -34,6 +37,43 @@ final class GameShortcode
         wp_enqueue_script_module('jumpnrun-client', $script, [], JUMPNRUN_VERSION);
         if (file_exists(JUMPNRUN_DIR . 'assets/game/client.css')) {
             wp_enqueue_style('jumpnrun-client', $css, [], JUMPNRUN_VERSION);
+        }
+    }
+
+    /**
+     * Gibt `<link rel="preload" as="image">` Tags fuer Level-1-Backgrounds aus.
+     * Browser laedt sie parallel zum JS-Bundle — der Spieler sieht den Loading-
+     * Screen kuerzer wenn Hintergruende gross sind (Adco-Anforderung: bis 12k px).
+     */
+    public function maybePreloadHeroAssets(): void
+    {
+        global $post;
+        if (!is_a($post, 'WP_Post') || !has_shortcode($post->post_content, self::TAG)) {
+            return;
+        }
+
+        $pools = AssetRepository::pools();
+        $level1 = $pools['backgrounds'][1] ?? [];
+        if (!is_array($level1) || $level1 === []) {
+            return;
+        }
+
+        // Maximal 3 Tags ausgeben — mehr Preload-Hints konkurrieren um die
+        // gleiche Bandbreite und blockieren wichtigere Ressourcen.
+        $count = 0;
+        foreach ($level1 as $item) {
+            if ($count >= 3) {
+                break;
+            }
+            $url = is_array($item) ? ($item['url'] ?? null) : null;
+            if (!is_string($url) || $url === '') {
+                continue;
+            }
+            printf(
+                '<link rel="preload" as="image" href="%s" />' . "\n",
+                esc_url($url)
+            );
+            $count++;
         }
     }
 
@@ -69,6 +109,7 @@ final class GameShortcode
 
         $sprites = JUMPNRUN_URL . 'assets/sprites/';
         $scoreboard = ConfigService::scoreboardConfig();
+        $viewport = ConfigService::viewportConfig();
         $images = $this->spriteMap($sprites);
         // Per Media-Picker zugewiesene Sprites ueberschreiben die Defaults.
         foreach (ConfigService::spriteOverrides() as $key => $url) {
@@ -85,6 +126,7 @@ final class GameShortcode
             'images' => $images,
             'assets' => $assets,
             'scoreboard' => $scoreboard,
+            'viewport' => $viewport,
         ];
 
         $json = wp_json_encode($config, JSON_HEX_TAG | JSON_HEX_AMP);

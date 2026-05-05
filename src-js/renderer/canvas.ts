@@ -39,11 +39,41 @@ export class CanvasRenderer {
   private backgroundPool: BackgroundPool = {};
   private chosenBg: Map<number, string> = new Map();
 
+  // Physische Render-Geometrie. `width`/`height` bleiben die logischen
+  // Spielfeld-Masse (z.B. 960x540), die die Engine kennt. `scale` + `offset`
+  // mappen logische Koordinaten contain-fit auf den physischen Canvas.
+  private scale = 1;
+  private offsetX = 0;
+  private offsetY = 0;
+  private dpr = 1;
+
   constructor(
     private readonly ctx: CanvasRenderingContext2D,
     private readonly width: number,
     private readonly height: number,
   ) {}
+
+  /**
+   * Passt die physische Canvas-Groesse + Transform-Matrix an einen neuen
+   * Container-Abmasse an. Aspect-preservierender contain-fit: das Spielfeld
+   * fuellt soviel wie moeglich, ohne verzerrt zu werden — verbleibende
+   * Flaechen werden Letterbox (schwarz nach `clearRect`).
+   */
+  setSize(cssWidth: number, cssHeight: number, dpr: number = window.devicePixelRatio || 1): void {
+    if (cssWidth <= 0 || cssHeight <= 0) return;
+    this.dpr = dpr;
+
+    const canvas = this.ctx.canvas;
+    canvas.width = Math.round(cssWidth * dpr);
+    canvas.height = Math.round(cssHeight * dpr);
+
+    // Contain-fit: kleinere Skala bestimmt, damit nichts abgeschnitten wird.
+    const sx = cssWidth / this.width;
+    const sy = cssHeight / this.height;
+    this.scale = Math.min(sx, sy);
+    this.offsetX = (cssWidth - this.width * this.scale) / 2;
+    this.offsetY = (cssHeight - this.height * this.scale) / 2;
+  }
 
   /** Aktualisiert die Pixelmasken — wird nach dem asynchronen Bild-Preload gesetzt. */
   setMasks(masks: MaskMap): void {
@@ -83,14 +113,30 @@ export class CanvasRenderer {
   /** Zeichnet einen Frame: Hintergrund, Plattformen, Spieler, Hindernisse, Coins, HUD, Overlays. */
   render(state: GameState, images: ImageMap): void {
     const { ctx, width, height } = this;
+
+    // Erst die komplette physische Flaeche clearen (Letterbox-Bereiche werden
+    // schwarz, weil das CSS-Background des Canvas-Wraps schwarz ist). Dann
+    // Transform setzen damit alle weiteren Draw-Calls in logischen Koordinaten
+    // laufen — Engine + Renderer-Code muss nichts ueber Skalierung wissen.
+    const canvas = ctx.canvas;
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.setTransform(
+      this.scale * this.dpr,
+      0,
+      0,
+      this.scale * this.dpr,
+      this.offsetX * this.dpr,
+      this.offsetY * this.dpr,
+    );
+
     ctx.clearRect(0, 0, width, height);
 
     // ── Background ───────────────────────────────────────────────────────────
     const bgKey = this.bgKeyForLevel(state.level);
     const bg = bgKey !== null ? images.get(bgKey) : undefined;
-    if (bg) {
-      ctx.drawImage(bg, state.backgroundX, 0, width, height);
-      ctx.drawImage(bg, state.backgroundX + width, 0, width, height);
+    if (bg && bg.naturalHeight > 0) {
+      this.drawTiledBackground(bg, state.backgroundX);
     } else {
       this.drawFallbackBackground();
     }
@@ -244,6 +290,36 @@ export class CanvasRenderer {
   }
 
   // ── Private helpers ──────────────────────────────────────────────────────
+
+  /**
+   * Skaliert das Hintergrundbild auf die Spielfeld-Hoehe (Aspect bleibt
+   * erhalten) und kachelt es horizontal endlos. Erlaubt beliebige Bild-
+   * breiten — von 200 px (sichtbares Tiling) bis 12000 px (kacheln nur
+   * selten). Tile-Mode ist global, kein Per-Background-Schema.
+   */
+  private drawTiledBackground(bg: HTMLImageElement, scrollX: number): void {
+    const { ctx, width, height } = this;
+    const scale = height / bg.naturalHeight;
+    const drawW = bg.naturalWidth * scale;
+    if (drawW <= 0) {
+      this.drawFallbackBackground();
+      return;
+    }
+
+    // Start-X auf den Bereich (-drawW, 0] normieren. Engine zaehlt scrollX
+    // monoton runter (-100, -200, …) — dieser Versatz ist die "rest-Pixel"
+    // bis zum naechsten ganzzahligen Tile, mit dem Vorzeichen das nach
+    // links zeigt. Bug-Falle: das einfache `((x % d) + d) % d` Pattern
+    // gibt einen positiven Offset zurueck und laesst den Hintergrund
+    // optisch rueckwaerts laufen, weil der Tile-Anker dann nach RECHTS
+    // wandert sobald scrollX sinkt.
+    let xStart = scrollX % drawW;
+    if (xStart > 0) xStart -= drawW;
+
+    for (let x = xStart; x < width; x += drawW) {
+      ctx.drawImage(bg, x, 0, drawW, height);
+    }
+  }
 
   private drawFallbackBackground(): void {
     const { ctx, width, height } = this;

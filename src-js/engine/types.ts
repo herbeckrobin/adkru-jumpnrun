@@ -79,6 +79,27 @@ export interface PlatformSpec {
 /** Status-Machine des Spiels — idle bis gameover. */
 export type GameStatus = 'idle' | 'running' | 'paused' | 'gameover';
 
+/**
+ * CSS-Pixelmasse + Skalierung des Canvas-Containers.
+ * Engine bleibt in logischen Koordinaten (canvasWidth/Height aus Config),
+ * der Renderer rechnet diese ueber `scale` + `offset` auf die physische
+ * Canvas-Flaeche um (contain-fit, Letterboxing wenn Aspect abweicht).
+ */
+export interface GameDimensions {
+  /** Container-Breite in CSS-Pixeln (vor DPR-Multiplikation). */
+  cssWidth: number;
+  /** Container-Hoehe in CSS-Pixeln. */
+  cssHeight: number;
+  /** Logisch → CSS-Pixel-Faktor (Aspect-preservierend). */
+  scale: number;
+  /** Letterbox-Offset links in CSS-Pixeln. */
+  offsetX: number;
+  /** Letterbox-Offset oben in CSS-Pixeln. */
+  offsetY: number;
+  /** Device Pixel Ratio fuer scharfe Darstellung auf Retina. */
+  dpr: number;
+}
+
 /** Immutable Snapshot des aktuellen Spielstands fuer den Renderer. */
 export interface GameState {
   readonly status: GameStatus;

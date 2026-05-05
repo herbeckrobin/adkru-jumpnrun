@@ -2,9 +2,12 @@ import { ApiClient, type ApiConfig, type ScoreResult } from './api-client.ts';
 import './client.css';
 import type { BackgroundPool, GameConfig, ObstacleSpec, PlatformSpec } from './engine/index.ts';
 import { GameConfigSchema, GameLoop, GameWorld } from './engine/index.ts';
+import { attachFullscreenButton } from './fullscreen-button.ts';
+import { createLoadingScreen } from './loading-screen.ts';
 import type { ImageMap } from './renderer/index.ts';
 import { CanvasRenderer, loadImages } from './renderer/index.ts';
 import { Scoreboard, type ScoreboardConfig } from './scoreboard.ts';
+import { installViewportGuard, type ViewportConfig } from './viewport-guard.ts';
 
 // ── Public config interface (set via window.JumpnrunConfig in WP) ─────────
 
@@ -27,6 +30,8 @@ export interface JumpnrunConfig {
   scoreboard?: ScoreboardConfig;
   /** Asset-Pools aus dem WP-Admin (CPTs). Fehlt → Engine nutzt Default-Sprites. */
   assets?: AssetPools;
+  /** Mindestgroesse + Landscape-Pflicht. Fehlt → Defaults aus viewport-guard. */
+  viewport?: ViewportConfig;
   /** Show collision hitboxes + sprite masks on load. Toggle at runtime with `Shift+Ctrl+D`. */
   debug?: boolean;
 }
@@ -39,9 +44,14 @@ interface GameOverHandlers {
    * Optional — wenn nicht gesetzt, wird ohne Warnung direkt gespeichert.
    */
   onLookup?: (name: string) => Promise<number | null>;
+  /**
+   * Holt den vorausichtlichen Rang fuer den aktuellen Score (ohne zu
+   * speichern). Optional — fehlt nur wenn keine API verfuegbar ist.
+   */
+  onPreviewRank?: () => Promise<{ rank: number; totalEntries: number } | null>;
   /** Submittet den Score mit dem eingegebenen Namen. */
   onSave: (name: string) => Promise<ScoreResult | null>;
-  /** User waehlt "Weiter spielen" ohne zu speichern. */
+  /** User waehlt "Nochmal spielen" ohne zu speichern (Restart). */
   onSkip: () => void;
   /** Nach dem Saved-Screen "Nochmal spielen". */
   onRestart: () => void;
@@ -54,6 +64,7 @@ const LAST_NAME_KEY = 'jumpnrun:lastName';
 /** Baut das DOM-UI um den Canvas herum — Start-, Game-Over- und Discount-Overlays. */
 class GameUI {
   readonly canvas: HTMLCanvasElement;
+  readonly wrap: HTMLElement;
 
   private readonly startOverlay: HTMLElement;
   private readonly startBtn: HTMLElement;
@@ -67,9 +78,16 @@ class GameUI {
 
   constructor(root: HTMLElement, width: number, height: number) {
     const wrap = el('div', 'jnr-wrap');
+    // Aspect-Ratio aus Engine-Konfiguration in CSS spiegeln — sonst nutzt
+    // das Default 16/9. Tomy kann via Engine-Settings andere Spielfeld-Massen
+    // konfigurieren ohne CSS anfassen zu muessen.
+    wrap.style.setProperty('--jnr-aspect', `${width} / ${height}`);
     root.appendChild(wrap);
+    this.wrap = wrap;
 
     this.canvas = document.createElement('canvas');
+    // Initiale Attribute — werden gleich von CanvasRenderer.setSize() ueber-
+    // schrieben sobald wir die echte Container-Groesse aus dem Layout kennen.
     this.canvas.width = width;
     this.canvas.height = height;
     wrap.appendChild(this.canvas);
@@ -201,13 +219,31 @@ class GameUI {
       el('p', 'jnr-score-display', String(score)),
     );
 
+    // Rank-Zeile als Platzhalter — wird async befuellt sobald die Preview-
+    // API antwortet. Bei Fehler / fehlender API bleibt sie versteckt damit
+    // wir nicht "Platz —" zeigen.
+    const rankLine = el('p', 'jnr-rank-line jnr-hidden', '');
+
     const saveBtn = el('button', 'jnr-btn', 'Highscore speichern');
     saveBtn.onclick = () => this.renderNameInput(score, handlers, suggestedName);
 
-    const skipBtn = el('button', 'jnr-btn jnr-btn-secondary', 'Weiter spielen');
+    const skipBtn = el('button', 'jnr-btn jnr-btn-secondary', 'Nochmal spielen');
     skipBtn.onclick = () => handlers.onSkip();
 
-    this.render(el('h2', 'jnr-title', title), scoreGroup, divider(), saveBtn, skipBtn);
+    this.render(el('h2', 'jnr-title', title), scoreGroup, rankLine, divider(), saveBtn, skipBtn);
+
+    // Rank async nachladen — zeigt "Platz X von Y" auch wenn der Spieler
+    // unter den Top 10 landet. Adco-Anforderung: immer Rang anzeigen.
+    if (handlers.onPreviewRank) {
+      void handlers.onPreviewRank().then((preview) => {
+        if (!preview) return;
+        const denom = preview.totalEntries > 0 ? ` von ${preview.totalEntries + 1}` : '';
+        // +1 weil der eigene Score noch nicht gespeichert ist — er ist Teil
+        // der Gesamtmenge sobald gespeichert wird.
+        rankLine.textContent = `Du bist Platz ${preview.rank}${denom}`;
+        rankLine.classList.remove('jnr-hidden');
+      });
+    }
   }
 
   private renderNameInput(score: number, handlers: GameOverHandlers, defaultName: string): void {
@@ -429,6 +465,12 @@ export function bootstrap(root: HTMLElement, rawConfig: JumpnrunConfig = {}): vo
 
   const ui = new GameUI(root, engineCfg.canvasWidth, engineCfg.canvasHeight);
 
+  // Viewport-Guard liegt visuell ueber dem Spiel — blockiert nichts im
+  // Bootstrap-Pfad, zeigt nur Pflicht-Hinweise (Querformat, Mindestgroesse).
+  // Auf root statt wrap installieren: der Hinweis soll auch zu sehen sein
+  // wenn der Wrap selbst zu klein ist.
+  installViewportGuard(root, rawConfig.viewport ?? {});
+
   // Start loading sprites non-blocking — game shows start screen immediately.
   // The closure in the render loop captures the `images` variable by reference,
   // so reassigning it when the promise resolves is picked up on the next frame.
@@ -445,6 +487,26 @@ export function bootstrap(root: HTMLElement, rawConfig: JumpnrunConfig = {}): vo
     coinMagnet: engineCfg.coinMagnet,
   };
 
+  // Responsive Canvas: ResizeObserver synchronisiert physische Canvas-Pixel
+  // mit der CSS-Container-Groesse. Engine bleibt in logischen 960x540
+  // Koordinaten — der Renderer macht das Mapping via Transform-Matrix.
+  // Debounce ist nicht noetig: Resize feuert per RAF, setSize ist O(1).
+  const syncCanvasSize = (): void => {
+    const rect = ui.wrap.getBoundingClientRect();
+    if (rect.width > 0 && rect.height > 0) {
+      renderer.setSize(rect.width, rect.height);
+    }
+  };
+  // Initial: einmal direkt nach DOM-Append damit der erste Frame schon
+  // korrekt skaliert wird.
+  syncCanvasSize();
+  const resizeObserver = new ResizeObserver(syncCanvasSize);
+  resizeObserver.observe(ui.wrap);
+
+  // Vollbild-Button oben rechts. Wenn der Spieler in Vollbild wechselt,
+  // triggert der ResizeObserver oben automatisch ein neues setSize().
+  attachFullscreenButton(ui.wrap, ui.wrap);
+
   const obstaclePool = rawConfig.assets?.obstacles ?? [];
   const platformPool = rawConfig.assets?.platforms ?? [];
   const backgroundPool = rawConfig.assets?.backgrounds ?? {};
@@ -452,12 +514,24 @@ export function bootstrap(root: HTMLElement, rawConfig: JumpnrunConfig = {}): vo
   const world = new GameWorld(engineCfg, obstaclePool, platformPool);
 
   let images: ImageMap = new Map();
-  if (rawConfig.images) {
-    loadImages(rawConfig.images).then(({ images: loaded, masks }) => {
-      images = loaded;
-      renderer.setMasks(masks);
-      world.setMasks(masks);
-    });
+  if (rawConfig.images && Object.keys(rawConfig.images).length > 0) {
+    // Loading-Screen liegt ueber dem Wrap (Start-Overlay, Discount, etc.).
+    // Verschwindet automatisch sobald 100% erreicht — der Spieler kann den
+    // Start-Button erst dann anklicken weil bis dahin der Loading-Overlay
+    // pointer-events blockt.
+    const loading = createLoadingScreen(ui.wrap);
+    loadImages(rawConfig.images, (loaded, total) => loading.update(loaded, total))
+      .then(({ images: loaded, masks }) => {
+        images = loaded;
+        renderer.setMasks(masks);
+        world.setMasks(masks);
+      })
+      .catch((err: unknown) => {
+        // Defensive: loadImages selbst wirft nicht (Promise.allSettled), aber
+        // falls doch — Loading-Screen muss weg sonst bleibt der Spieler stuck.
+        console.error('[jumpnrun] loadImages fehlgeschlagen', err);
+        loading.done();
+      });
   }
   const loop = new GameLoop(
     (dt) => world.update(dt),
@@ -515,7 +589,12 @@ export function bootstrap(root: HTMLElement, rawConfig: JumpnrunConfig = {}): vo
     }
 
     ui.showGameOver(score, {
-      ...(apiClient ? { onLookup: (name: string) => apiClient.lookupName(name) } : {}),
+      ...(apiClient
+        ? {
+            onLookup: (name: string) => apiClient.lookupName(name),
+            onPreviewRank: () => apiClient.previewRank(score),
+          }
+        : {}),
       onSave: async (name: string) => {
         if (!apiClient || !savedSession || score <= 0) {
           return null;

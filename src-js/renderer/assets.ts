@@ -86,17 +86,30 @@ function buildMask(img: HTMLImageElement): SpriteMask | null {
   };
 }
 
+/** Wird nach jedem geladenen Asset gerufen — auch bei Fehlern. */
+export type LoadProgress = (loaded: number, total: number) => void;
+
 /**
  * Loads all provided image URLs in parallel and builds alpha masks for each.
  * Images that fail to load are silently skipped; sprites whose masks can't be
  * built (CORS-tainted etc.) just won't get a mask and fall back to AABB.
+ *
+ * `onProgress` wird nach jedem Asset gerufen (success ODER failure), damit
+ * eine Loading-UI auch dann auf 100% kommt wenn ein Sprite kaputt ist.
  */
 /** Laed alle Bilder parallel und baut pro Bild eine Alpha-Maske fuer die pixelgenaue Hitbox. */
 export async function loadImages(
   entries: Record<string, string>,
+  onProgress?: LoadProgress,
 ): Promise<{ images: ImageMap; masks: MaskMap }> {
   const images: ImageMap = new Map();
   const masks: MaskMap = new Map();
+  const total = Object.keys(entries).length;
+  let loaded = 0;
+  // Initial-Tick mit 0/total damit eine UI sofort die Skala kennt — wichtig
+  // bei sehr schnellen Loads, sonst sieht die Progress-Bar nie 0% sondern
+  // springt direkt auf einen hohen Wert.
+  onProgress?.(0, total);
   await Promise.allSettled(
     Object.entries(entries).map(async ([key, url]) => {
       try {
@@ -106,6 +119,9 @@ export async function loadImages(
         if (m) masks.set(key, m);
       } catch (err) {
         console.warn(`[jumpnrun] Sprite nicht geladen: ${key} → ${url}`, err);
+      } finally {
+        loaded++;
+        onProgress?.(loaded, total);
       }
     }),
   );

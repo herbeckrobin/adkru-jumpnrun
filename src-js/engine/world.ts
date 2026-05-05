@@ -118,9 +118,12 @@ export class GameWorld {
   update(_dt: number): void {
     if (this._status !== 'running') return;
 
-    // Background parallax scroll
+    // Background scroll — kontinuierlich sinkender Offset. Der Renderer
+    // kachelt den Hintergrund per Modulo gegen die tatsaechliche skalierte
+    // Bildbreite (siehe drawTiledBackground), darum kein Reset hier: die
+    // Engine kennt die Bildbreite nicht und ein Reset auf 0 wuerde sichtbar
+    // springen sobald variabel breite Backgrounds genutzt werden.
     this._backgroundX -= this.cfg.bgScrollBase + this._level * this.cfg.bgScrollPerLevel;
-    if (this._backgroundX <= -this.cfg.canvasWidth) this._backgroundX = 0;
 
     // Level-text countdown
     if (this._showLevelText && --this._levelTextFrames <= 0) {

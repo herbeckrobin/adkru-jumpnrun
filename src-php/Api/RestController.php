@@ -38,5 +38,12 @@ final class RestController
             'permission_callback' => '__return_true',
             'args' => HighscoreLookupEndpoint::args(),
         ]);
+
+        register_rest_route(self::NAMESPACE, '/rank', [
+            'methods' => 'GET',
+            'callback' => [new RankPreviewEndpoint(), 'handle'],
+            'permission_callback' => '__return_true',
+            'args' => RankPreviewEndpoint::args(),
+        ]);
     }
 }

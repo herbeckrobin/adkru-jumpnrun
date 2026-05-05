@@ -89,6 +89,14 @@ final class ConfigSchema
                     'scoreboardLimit' => ['type' => 'int',  'default' => 10, 'min' => 3, 'max' => 25, 'step' => 1, 'label' => 'Anzahl Einträge'],
                 ],
             ],
+            'viewport' => [
+                'label' => 'Viewport',
+                'fields' => [
+                    'minViewportWidth'       => ['type' => 'int',  'default' => 568, 'min' => 320, 'max' => 1920, 'step' => 8,  'label' => 'Mindestbreite (px)', 'help' => 'Unterhalb dieser Breite zeigt das Spiel einen "Geraet zu klein" Hinweis. Default 568 = iPhone SE Landscape.'],
+                    'minViewportHeight'      => ['type' => 'int',  'default' => 320, 'min' => 240, 'max' => 1080, 'step' => 8,  'label' => 'Mindesthöhe (px)', 'help' => 'Unterhalb dieser Hoehe zeigt das Spiel einen "Geraet zu klein" Hinweis.'],
+                    'requireLandscapeOnMobile' => ['type' => 'bool', 'default' => true, 'label' => 'Auf Mobile Querformat erzwingen', 'help' => 'Im Hochformat erscheint ein Hinweis "Bitte Handy ins Querformat drehen". Touch-Geraete im Hochformat sehen das Spiel sonst zu klein.'],
+                ],
+            ],
             'sprites' => [
                 'label' => 'Sprites',
                 'fields' => [

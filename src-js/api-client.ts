@@ -61,6 +61,24 @@ export class ApiClient {
     }
   }
 
+  /**
+   * Vorausichtlicher Rang fuer einen Score, ohne ihn zu speichern.
+   * Wird direkt nach Game-Over abgefragt — der Spieler sieht "Du bist
+   * Platz X" auch wenn er sich gegen Speichern entscheidet. Bei Network-
+   * Fehler `null` (UI versteckt dann nur die Anzeige).
+   */
+  async previewRank(score: number): Promise<{ rank: number; totalEntries: number } | null> {
+    try {
+      const url = `${this.config.root}rank?score=${encodeURIComponent(String(score))}`;
+      const res = await fetch(url, { credentials: 'same-origin' });
+      if (!res.ok) return null;
+      return (await res.json()) as { rank: number; totalEntries: number };
+    } catch (err) {
+      console.warn('[jumpnrun] previewRank failed', err);
+      return null;
+    }
+  }
+
   /** Laed die aktuelle Top-Liste, bei Fehler leeres Array. */
   async getHighscores(limit = 10): Promise<HighscoreEntry[]> {
     try {

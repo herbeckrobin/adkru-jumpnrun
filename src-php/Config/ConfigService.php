@@ -111,6 +111,9 @@ final class ConfigService
             'playerIdleSprite',
             'playerJumpSprite',
             'coinSprite',
+            'minViewportWidth',
+            'minViewportHeight',
+            'requireLandscapeOnMobile',
         ];
         foreach ($nonEngine as $key) {
             unset($cfg[$key]);
@@ -125,6 +128,17 @@ final class ConfigService
         return [
             'enabled' => (bool) ($cfg['showScoreboard'] ?? true),
             'limit' => (int) ($cfg['scoreboardLimit'] ?? 10),
+        ];
+    }
+
+    /** @return array{minWidth:int, minHeight:int, requireLandscape:bool} */
+    public static function viewportConfig(): array
+    {
+        $cfg = self::getConfig();
+        return [
+            'minWidth' => (int) ($cfg['minViewportWidth'] ?? 568),
+            'minHeight' => (int) ($cfg['minViewportHeight'] ?? 320),
+            'requireLandscape' => (bool) ($cfg['requireLandscapeOnMobile'] ?? true),
         ];
     }
 
