@@ -114,18 +114,31 @@
   /* --jnr-aspect-w/h werden von client.ts aus engineCfg.canvasWidth/Height
      gesetzt. Ohne Setzung greift 16:9 als Default. */
   aspect-ratio: var(--jnr-aspect-w, 16) / var(--jnr-aspect-h, 9);
-  /* Doppel-Constraint: niemals breiter als der Container, niemals hoeher
-     als das Viewport. Auf Mobile-Landscape (Viewport breiter als hoch im
-     ungewoehnlichen Verhaeltnis 19.5:9) wuerde `width: 100% + aspect-ratio`
-     allein den Wrap hoeher machen als das Display — der Spieler sieht
-     dann mehr Spielfeld oder muss scrollen. Mit der zweiten min()-Klausel
-     skaliert der Wrap so dass er komplett ins Viewport passt. */
-  width: min(100%, calc(100dvh * var(--jnr-aspect-w, 16) / var(--jnr-aspect-h, 9)));
-  margin-inline: auto;
+  /* `width: 100% + max-height: 100dvh` ist die einfachste, robusteste
+     Variante: der Browser haelt aspect-ratio und schrumpft die Breite
+     wenn die Hoehe sonst das Viewport ueberschreiten wuerde. */
+  width: 100%;
   max-width: 100%;
+  max-height: 100dvh;
+  margin-inline: auto;
   box-shadow:
     0 8px 32px rgba(0, 0, 0, 0.5),
     0 0 0 1px rgba(255, 255, 255, 0.06);
+}
+
+/* Mobile-Landscape: Aspect-Constraint wuerde sonst seitliche Theme-
+   Hintergrund-Streifen sichtbar machen (Wrap schmaler als Container).
+   Hier soll der Wrap die volle Breite + Hoehe nehmen — der Renderer
+   macht intern Letterbox (schwarz, im Wrap drinnen), so wirkt das
+   Spielfeld nahtlos und der Spieler sieht keinen Theme-Background. */
+@media (orientation: landscape) and (max-height: 540px) {
+  .jnr-wrap {
+    aspect-ratio: auto;
+    width: 100%;
+    height: 100dvh;
+    max-width: 100%;
+    border-radius: 0;
+  }
 }
 
 .jnr-wrap canvas {
