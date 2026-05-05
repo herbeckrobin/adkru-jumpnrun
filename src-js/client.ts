@@ -80,8 +80,10 @@ class GameUI {
     const wrap = el('div', 'jnr-wrap');
     // Aspect-Ratio aus Engine-Konfiguration in CSS spiegeln — sonst nutzt
     // das Default 16/9. Tomy kann via Engine-Settings andere Spielfeld-Massen
-    // konfigurieren ohne CSS anfassen zu muessen.
-    wrap.style.setProperty('--jnr-aspect', `${width} / ${height}`);
+    // konfigurieren ohne CSS anfassen zu muessen. Zwei separate Variablen
+    // damit das CSS sie auch in calc() fuer den Hoehen-Constraint nutzen kann.
+    wrap.style.setProperty('--jnr-aspect-w', String(width));
+    wrap.style.setProperty('--jnr-aspect-h', String(height));
     root.appendChild(wrap);
     this.wrap = wrap;
 

@@ -111,10 +111,17 @@
   border-radius: 10px;
   overflow: hidden;
   background: #000;
-  /* --jnr-aspect wird von client.ts aus engineCfg.canvasWidth/Height gesetzt
-     (z.B. "960 / 540"). Ohne Setzung greift der 16/9 Default. */
-  aspect-ratio: var(--jnr-aspect, 16 / 9);
-  width: 100%;
+  /* --jnr-aspect-w/h werden von client.ts aus engineCfg.canvasWidth/Height
+     gesetzt. Ohne Setzung greift 16:9 als Default. */
+  aspect-ratio: var(--jnr-aspect-w, 16) / var(--jnr-aspect-h, 9);
+  /* Doppel-Constraint: niemals breiter als der Container, niemals hoeher
+     als das Viewport. Auf Mobile-Landscape (Viewport breiter als hoch im
+     ungewoehnlichen Verhaeltnis 19.5:9) wuerde `width: 100% + aspect-ratio`
+     allein den Wrap hoeher machen als das Display — der Spieler sieht
+     dann mehr Spielfeld oder muss scrollen. Mit der zweiten min()-Klausel
+     skaliert der Wrap so dass er komplett ins Viewport passt. */
+  width: min(100%, calc(100dvh * var(--jnr-aspect-w, 16) / var(--jnr-aspect-h, 9)));
+  margin-inline: auto;
   max-width: 100%;
   box-shadow:
     0 8px 32px rgba(0, 0, 0, 0.5),
