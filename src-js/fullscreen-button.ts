@@ -10,6 +10,7 @@
  */
 
 const PSEUDO_CLASS = 'jnr-pseudo-fullscreen';
+const SCROLL_LOCK_CLASS = 'jnr-fullscreen-lock';
 
 interface FullscreenButtonHandle {
   /** Entfernt Button + Listener — fuer Tests / Hot-Reload. */
@@ -40,12 +41,26 @@ export function attachFullscreenButton(
   const isNativeActive = (): boolean => document.fullscreenElement === host;
   const isFullscreen = (): boolean => isNativeActive() || isPseudoActive();
 
+  // Body- und html-Scroll-Lock — verhindert dass der Spieler hinter dem Spiel
+  // scrollt oder Pull-to-Refresh triggert. Wird sowohl im Pseudo-Fullscreen
+  // als auch im native Fullscreen gesetzt; der Browser entfernt im echten
+  // Fullscreen zwar die Page-Scroll automatisch, aber bei Toolbar-Resize auf
+  // iOS Safari ist die Klasse trotzdem hilfreich.
+  const lockScroll = (): void => {
+    document.documentElement.classList.add(SCROLL_LOCK_CLASS);
+  };
+  const unlockScroll = (): void => {
+    document.documentElement.classList.remove(SCROLL_LOCK_CLASS);
+  };
+
   const enterPseudo = (): void => {
     host.classList.add(PSEUDO_CLASS);
+    lockScroll();
     setIcon('shrink');
   };
   const exitPseudo = (): void => {
     host.classList.remove(PSEUDO_CLASS);
+    unlockScroll();
     setIcon('expand');
   };
 
@@ -76,6 +91,13 @@ export function attachFullscreenButton(
   btn.addEventListener('click', () => void onClick());
 
   const onFullscreenChange = (): void => {
+    if (isNativeActive()) {
+      lockScroll();
+    } else if (!isPseudoActive()) {
+      // Native Fullscreen verlassen (ESC oder API) — Lock nur entfernen
+      // wenn auch kein Pseudo-Fullscreen mehr aktiv ist.
+      unlockScroll();
+    }
     setIcon(isFullscreen() ? 'shrink' : 'expand');
   };
   document.addEventListener('fullscreenchange', onFullscreenChange);
@@ -96,6 +118,9 @@ export function attachFullscreenButton(
       document.removeEventListener('fullscreenchange', onFullscreenChange);
       document.removeEventListener('keydown', onKey);
       if (isPseudoActive()) exitPseudo();
+      // Defensive: Lock auch entfernen wenn aus irgendeinem Grund noch aktiv
+      // ist (z.B. nach Hot-Reload waehrend Fullscreen).
+      unlockScroll();
     },
   };
 }
