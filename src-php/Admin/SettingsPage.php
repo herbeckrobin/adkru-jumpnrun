@@ -41,7 +41,17 @@ final class SettingsPage
             return [];
         }
 
-        $out = [];
+        // Bestehende Werte als Basis. Sonst gehen Felder anderer Tabs auf
+        // Default zurueck wenn man nur einen Tab speichert — z.B. wuerde
+        // ein Save im Physik-Tab die Sprite-Override-IDs (playerIdleSprite/
+        // JumpSprite/coinSprite) auf 0 setzen und die Spielfigur erschiene
+        // als hellblaues Rechteck. Bool-Felder haben einen Hidden-0-Default-
+        // Input vor jeder Checkbox (siehe renderField), darum kommen
+        // Checkbox-Werte im aktiven Tab immer mit explizitem Wert mit —
+        // Merge ist auch fuer Bools safe.
+        $existing = get_option(ConfigService::OPTION_KEY, []);
+        $out = is_array($existing) ? $existing : [];
+
         foreach (ConfigSchema::fieldMap() as $key => $spec) {
             if (!array_key_exists($key, $input)) {
                 continue;
