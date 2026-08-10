@@ -4,51 +4,95 @@ declare(strict_types=1);
 
 namespace Jumpnrun\Shortcode;
 
-use Jumpnrun\Api\RestController;
 use Jumpnrun\Assets\AssetRepository;
-use Jumpnrun\Config\ConfigService;
+use Jumpnrun\Embed\GameAttributes;
+use Jumpnrun\Embed\GameRenderer;
 
-/** Rendert den Spiel-Canvas samt Config-Bootstrap fuer [jumpnrun]. */
+/**
+ * Bindet das Spiel per [jumpnrun] ein.
+ *
+ * Reiner Adapter: nimmt die Shortcode-Attribute entgegen und reicht sie an den
+ * GameRenderer weiter. Die Attribut-Definitionen kommen aus GameAttributes,
+ * damit Shortcode, Block und Elementor-Widget dieselben Werte kennen.
+ */
 final class GameShortcode
 {
     public const TAG = 'jumpnrun';
 
-    /** Registriert Shortcode und Enqueue-Hook. */
+    private GameRenderer $renderer;
+
+    public function __construct(?GameRenderer $renderer = null)
+    {
+        $this->renderer = $renderer ?? new GameRenderer();
+    }
+
+    /** Registriert Shortcode und Preload-Hook. */
     public function register(): void
     {
         add_shortcode(self::TAG, [$this, 'render']);
-        add_action('wp_enqueue_scripts', [$this, 'maybeEnqueue']);
-        // Level-1-Hintergruende parallel zum JS-Bundle preloaden — verkuerzt
-        // die wahrgenommene Ladezeit messbar wenn Bilder gross sind.
+        // Level-1-Hintergründe parallel zum JS-Bundle preloaden, das verkürzt
+        // die wahrgenommene Ladezeit messbar wenn Bilder groß sind.
+        // Das Enqueue hängt bewusst NICHT hier dran, es passiert beim Rendern.
         add_action('wp_head', [$this, 'maybePreloadHeroAssets'], 5);
     }
 
-    /** Laed Client-Skript und CSS nur auf Seiten die den Shortcode enthalten. */
-    public function maybeEnqueue(): void
+    /**
+     * @param array<string, mixed>|string $atts
+     */
+    public function render(array|string $atts = []): string
     {
-        global $post;
-        if (!is_a($post, 'WP_Post') || !has_shortcode($post->post_content, self::TAG)) {
-            return;
+        if (!is_array($atts)) {
+            $atts = [];
         }
 
-        $script = JUMPNRUN_URL . 'assets/game/client.js';
-        $css = JUMPNRUN_URL . 'assets/game/client.css';
+        $atts = shortcode_atts(GameAttributes::shortcodeDefaults(), $atts, self::TAG);
 
-        wp_enqueue_script_module('jumpnrun-client', $script, [], JUMPNRUN_VERSION);
-        if (file_exists(JUMPNRUN_DIR . 'assets/game/client.css')) {
-            wp_enqueue_style('jumpnrun-client', $css, [], JUMPNRUN_VERSION);
-        }
+        return $this->renderer->render($atts);
     }
 
     /**
-     * Gibt `<link rel="preload" as="image">` Tags fuer Level-1-Backgrounds aus.
-     * Browser laedt sie parallel zum JS-Bundle — der Spieler sieht den Loading-
-     * Screen kuerzer wenn Hintergruende gross sind (Adco-Anforderung: bis 12k px).
+     * Prüft ob die aktuelle Seite das Spiel einbindet.
+     *
+     * Ausschließlich für den head-Preload, der zwangsläufig vor dem Rendern
+     * läuft und darum den Seiteninhalt durchsuchen muss. Deckt post_content
+     * und Elementor ab, kann aber nicht jeden Page-Builder kennen. Der Preload
+     * ist deshalb eine Optimierung, keine Voraussetzung: bleibt er aus, lädt
+     * das Spiel trotzdem, nur der Ladescreen steht etwas länger.
+     */
+    private function pageUsesGame(): bool
+    {
+        global $post;
+        if (!$post instanceof \WP_Post) {
+            return false;
+        }
+
+        if (has_shortcode($post->post_content, self::TAG)) {
+            return true;
+        }
+
+        $elementorData = get_post_meta($post->ID, '_elementor_data', true);
+        if (!is_string($elementorData) || $elementorData === '') {
+            return false;
+        }
+
+        // Nur auf [jumpnrun] und [jumpnrun ...] matchen, nicht auf
+        // [jumpnrun_scoreboard]. Das native Elementor-Widget taucht hier
+        // als widgetType auf, darum wird es zusätzlich geprüft.
+        if (preg_match('/\[' . preg_quote(self::TAG, '/') . '[\s\]]/', $elementorData) === 1) {
+            return true;
+        }
+
+        return str_contains($elementorData, '"widgetType":"jumpnrun_game"');
+    }
+
+    /**
+     * Gibt `<link rel="preload" as="image">` Tags für Level-1-Backgrounds aus.
+     * Browser lädt sie parallel zum JS-Bundle, der Spieler sieht den Loading-
+     * Screen kürzer wenn Hintergründe groß sind (Adco-Anforderung: bis 12k px).
      */
     public function maybePreloadHeroAssets(): void
     {
-        global $post;
-        if (!is_a($post, 'WP_Post') || !has_shortcode($post->post_content, self::TAG)) {
+        if (!$this->pageUsesGame()) {
             return;
         }
 
@@ -58,7 +102,7 @@ final class GameShortcode
             return;
         }
 
-        // Maximal 3 Tags ausgeben — mehr Preload-Hints konkurrieren um die
+        // Maximal 3 Tags ausgeben, mehr Preload-Hints konkurrieren um die
         // gleiche Bandbreite und blockieren wichtigere Ressourcen.
         $count = 0;
         foreach ($level1 as $item) {
@@ -75,150 +119,5 @@ final class GameShortcode
             );
             $count++;
         }
-    }
-
-    /**
-     * Baut die Game-Config (Engine, Sprites, Asset-Pools, API) und gibt den Root-Container als HTML zurueck.
-     *
-     * @param array<string, mixed>|string $atts
-     */
-    public function render(array|string $atts = []): string
-    {
-        if (!is_array($atts)) {
-            $atts = [];
-        }
-
-        // Admin-Settings ins Engine-Objekt, dann Shortcode-Attrs als Instance-Override.
-        $engine = ConfigService::engineConfig();
-
-        $atts = shortcode_atts([
-            'width' => null,
-            'height' => null,
-            'discount_code' => null,
-        ], $atts, self::TAG);
-
-        if ($atts['width'] !== null) {
-            $engine['canvasWidth'] = (int) $atts['width'];
-        }
-        if ($atts['height'] !== null) {
-            $engine['canvasHeight'] = (int) $atts['height'];
-        }
-        if ($atts['discount_code'] !== null) {
-            $engine['discountCode'] = (string) $atts['discount_code'];
-        }
-
-        $sprites = JUMPNRUN_URL . 'assets/sprites/';
-        $scoreboard = ConfigService::scoreboardConfig();
-        $viewport = ConfigService::viewportConfig();
-        $images = $this->spriteMap($sprites);
-        // Per Media-Picker zugewiesene Sprites ueberschreiben die Defaults.
-        foreach (ConfigService::spriteOverrides() as $key => $url) {
-            $images[$key] = $url;
-        }
-        $assets = $this->buildAssetPools($images);
-
-        $config = [
-            'engine' => $engine,
-            'api' => [
-                'root' => esc_url_raw(rest_url(RestController::NAMESPACE . '/')),
-                'nonce' => wp_create_nonce('wp_rest'),
-            ],
-            'images' => $images,
-            'assets' => $assets,
-            'scoreboard' => $scoreboard,
-            'viewport' => $viewport,
-        ];
-
-        $json = wp_json_encode($config, JSON_HEX_TAG | JSON_HEX_AMP);
-        $width = (int) $engine['canvasWidth'];
-
-        // Single-Column-Layout. Das Scoreboard wird nur im Game-Over-Overlay
-        // angezeigt und vom Client selbst gebaut (siehe scoreboard.ts).
-        return sprintf(
-            '<div id="jumpnrun-root" style="max-width:%dpx;margin-inline:auto;"></div>' .
-            '<script>window.JumpnrunConfig=%s;</script>',
-            $width,
-            $json
-        );
-    }
-
-    /**
-     * Liefert grundsaetzlich KEINE Default-Bild-URLs mehr. Bilder kommen
-     * ausschliesslich aus drei Quellen:
-     *
-     *   1. CPT-Pool jnr_background  (via AssetRepository)
-     *   2. CPT-Pool jnr_obstacle    (via AssetRepository)
-     *   3. Settings-Overrides       (Player/Coin/Plattform — Media-Picker im Admin)
-     *
-     * Was der Kunde nicht in der Mediathek zugewiesen hat, zeigt der Renderer
-     * als Solid-Color-Box (FALLBACK-Map in canvas.ts) bzw. den Sky-Gradient
-     * fuer den Hintergrund. Konsistente Regel: keine Zuweisung → Farbflaeche.
-     *
-     * @return array<string, string>
-     */
-    private function spriteMap(string $base): array
-    {
-        // Plugin-Default-PNGs werden nicht mehr automatisch ans Frontend
-        // ausgeliefert — sie sind nur noch Source fuer den Seeder.
-        return [];
-    }
-
-    /**
-     * Nimmt die im Admin gepflegten Asset-CPTs, verteilt deren Bild-URLs in die
-     * `$images`-Map mit eindeutigen Keys und liefert die Engine-kompatiblen Pools
-     * mit `imageKey`-Referenzen zurueck.
-     *
-     * @param array<string, string> $images Pass-by-reference: die Map wird um CPT-Eintraege erweitert
-     * @return array{backgrounds: \stdClass|array<string, list<array{imageKey:string,weight:int}>>, obstacles: list<array{imageKey:string,width:int,height:int,minLevel:int,weight:int}>, platforms: list<array{imageKey:string,width:int,height:int,weight:int}>}
-     */
-    private function buildAssetPools(array &$images): array
-    {
-        $pools = AssetRepository::pools();
-
-        $backgrounds = [];
-        foreach ($pools['backgrounds'] as $level => $items) {
-            $list = [];
-            foreach ($items as $idx => $item) {
-                $key = sprintf('bg-cpt-%d-%d', (int) $level, $idx);
-                $images[$key] = $item['url'];
-                $list[] = [
-                    'imageKey' => $key,
-                    'weight' => (int) $item['weight'],
-                ];
-            }
-            $backgrounds[(string) $level] = $list;
-        }
-
-        $obstacles = [];
-        foreach ($pools['obstacles'] as $idx => $item) {
-            $key = sprintf('obstacle-cpt-%d', $idx);
-            $images[$key] = $item['url'];
-            $obstacles[] = [
-                'imageKey' => $key,
-                'width' => (int) $item['width'],
-                'height' => (int) $item['height'],
-                'minLevel' => (int) $item['minLevel'],
-                'weight' => (int) $item['weight'],
-            ];
-        }
-
-        $platforms = [];
-        foreach ($pools['platforms'] as $idx => $item) {
-            $key = sprintf('platform-cpt-%d', $idx);
-            $images[$key] = $item['url'];
-            $platforms[] = [
-                'imageKey' => $key,
-                'width' => (int) $item['width'],
-                'height' => (int) $item['height'],
-                'weight' => (int) $item['weight'],
-            ];
-        }
-
-        return [
-            // Leerer Pool → stdClass damit JS-seitig ein Objekt bleibt statt zu einem Array zu degenerieren.
-            'backgrounds' => $backgrounds === [] ? new \stdClass() : $backgrounds,
-            'obstacles' => $obstacles,
-            'platforms' => $platforms,
-        ];
     }
 }
