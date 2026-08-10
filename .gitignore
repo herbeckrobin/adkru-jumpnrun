@@ -23,8 +23,9 @@ Thumbs.db
 
 # PHP
 vendor/
-composer.lock
 .phpunit.cache/
+# composer.lock gehoert bewusst ins Repo: ohne ihn loest jeder Release-Build
+# die Dependencies neu auf, das Ergebnis ist dann nicht reproduzierbar.
 
 # Plugin build artifacts (Vite-Output)
 assets/game/*.js
