@@ -1,30 +1,45 @@
 === Jump-n-Run by ADKRU ===
 Contributors: herbeckrobin
 Tags: game, jump-and-run, shortcode, highscore
-Requires at least: 6.4
+Requires at least: 6.5
 Tested up to: 6.9
 Requires PHP: 8.2
-Stable tag: 0.5.0
+Stable tag: 0.7.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
-Jump-and-Run-Spiel als Shortcode.
+Jump-and-Run-Spiel als Shortcode, Gutenberg-Block oder Elementor-Widget.
 
 == Description ==
 
-Rendert ein Jump-and-Run-Spiel per Shortcode `[jumpnrun]` und eine Highscore-Liste per `[jumpnrun_scoreboard]`.
-Werbung und Layout drumherum baut der Site-Admin selbst (Elementor, Gutenberg o.a.).
+Rendert ein Jump-and-Run-Spiel mit Highscore-Liste. Drei Einbindungswege, alle
+mit denselben Einstellungen:
+
+* Shortcode `[jumpnrun]`, dazu `[jumpnrun_scoreboard]` für die Bestenliste
+* Gutenberg-Block "Jump and Run"
+* Elementor-Widget "Jump and Run" mit eigenen Panel-Feldern
+
+Werbung und Layout drumherum baut der Site-Admin selbst.
 
 Updates kommen per GitHub-Release. Einmal per ZIP installieren, danach 1-Klick-Updates im WP-Admin.
 
 == Installation ==
 
 1. ZIP aus dem aktuellen GitHub-Release herunterladen
-2. Plugins → Neu hinzufuegen → Plugin hochladen
+2. Plugins, Neu hinzufügen, Plugin hochladen
 3. Aktivieren
-4. Shortcode `[jumpnrun]` in eine Seite einsetzen
+4. Spiel einsetzen, wahlweise per Shortcode `[jumpnrun]`, Gutenberg-Block oder Elementor-Widget
 
 == Changelog ==
+
+= 0.7.0 =
+* Elementor-Widget "Jump and Run" mit eigener Panel-Kategorie und Feldern für Breite, Höhe und Rabattcode
+* Gutenberg-Block `jumpnrun/game` mit denselben Feldern
+* Fix: Auf Seiten, die mit einem Page-Builder gebaut sind, wurde das Spiel-Bundle nicht geladen. Die Prüfung lief gegen post_content, Elementor speichert den Inhalt aber in _elementor_data. Sichtbar war eine leere Fläche. Das Laden hängt jetzt am Rendern statt an einer Inhalts-Heuristik.
+* Editor-Vorschau zeigt eine maßstabsgetreue Platzhalter-Fläche in Spielfeldgröße statt das laufende Spiel
+* Instanz-Attribute liegen in einem gemeinsamen Schema, aus dem Shortcode, Block und Widget ihre Felder ableiten
+* Packaging bricht ab, wenn Plugin-Header, Konstante, package.json und readme.txt unterschiedliche Versionen tragen
+* Sourcemaps landen nicht mehr im Release-ZIP
 
 = 0.5.0 =
 * Highscore-Liste wandert vom permanenten Sidebar-Slot in den Game-Over-Overlay (Canvas bekommt mehr Platz, Liste motiviert am richtigen Moment)
