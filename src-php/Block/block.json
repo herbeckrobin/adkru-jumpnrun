@@ -1,0 +1,17 @@
+{
+  "$schema": "https://schemas.wp.org/trunk/block.json",
+  "apiVersion": 3,
+  "name": "jumpnrun/game",
+  "title": "Jump and Run",
+  "category": "widgets",
+  "icon": "games",
+  "description": "Das Jump-and-Run-Spiel auf einer Seite einbinden.",
+  "textdomain": "jumpnrun",
+  "keywords": ["spiel", "game", "jump", "run", "highscore"],
+  "supports": {
+    "html": false,
+    "multiple": false,
+    "align": ["wide", "full"]
+  },
+  "editorScript": "jumpnrun-block-editor"
+}

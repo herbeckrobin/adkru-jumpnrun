@@ -11,7 +11,9 @@ use Jumpnrun\Admin\AssetsPage;
 use Jumpnrun\Api\RestController;
 use Jumpnrun\Assets\AssetPostTypes;
 use Jumpnrun\Assets\AssetSeeder;
+use Jumpnrun\Block\GameBlock;
 use Jumpnrun\Db\Schema;
+use Jumpnrun\Elementor\ElementorIntegration;
 use Jumpnrun\Shortcode\GameShortcode;
 use Jumpnrun\Shortcode\ScoreboardShortcode;
 
@@ -38,8 +40,11 @@ final class Plugin
         add_action('init', [$this, 'registerShortcodes']);
         add_action('rest_api_init', [new RestController(), 'registerRoutes']);
 
-        // Asset-Pools (CPTs) sind auch im Frontend noetig — Registrierung im init.
+        // Asset-Pools (CPTs) sind auch im Frontend nötig, darum im init.
         (new AssetPostTypes())->register();
+
+        // Elementor-Widget. Die Hooks feuern nur bei aktivem Elementor.
+        (new ElementorIntegration())->register();
 
         if (is_admin()) {
             (new AdminMenu())->register();
@@ -50,10 +55,11 @@ final class Plugin
         }
     }
 
-    /** Registriert die Public-Shortcodes fuer Spiel und Scoreboard. */
+    /** Registriert Shortcodes und Gutenberg-Block für Spiel und Scoreboard. */
     public function registerShortcodes(): void
     {
         (new GameShortcode())->register();
         (new ScoreboardShortcode())->register();
+        (new GameBlock())->register();
     }
 }
