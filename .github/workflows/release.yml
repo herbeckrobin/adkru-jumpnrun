@@ -28,6 +28,24 @@ jobs:
       - name: Install JS dependencies
         run: bun install --frozen-lockfile
 
+      - name: Lint und Typecheck
+        run: |
+          bun run lint
+          bun run typecheck
+
+      - name: JS-Tests
+        run: bun run test
+
+      - name: composer.json pruefen
+        run: composer validate --no-check-publish
+
+      # Erst mit dev-Dependencies installieren, damit PHPUnit laeuft. Der
+      # schlanke Install ohne dev kommt danach und liefert das vendor/ fuers ZIP.
+      - name: PHP-Tests
+        run: |
+          composer install --prefer-dist --no-interaction
+          ./vendor/bin/phpunit
+
       - name: Build JS bundle
         run: bun run build
 
