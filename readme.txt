@@ -4,7 +4,7 @@ Tags: game, jump-and-run, shortcode, highscore
 Requires at least: 6.5
 Tested up to: 6.9
 Requires PHP: 8.2
-Stable tag: 0.7.2
+Stable tag: 0.7.3
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -31,6 +31,9 @@ Updates kommen per GitHub-Release. Einmal per ZIP installieren, danach 1-Klick-U
 4. Spiel einsetzen, wahlweise per Shortcode `[jumpnrun]`, Gutenberg-Block oder Elementor-Widget
 
 == Changelog ==
+
+= 0.7.3 =
+* Fix: Beschriftungen in Buttons standen seit 0.7.2 linksbündig statt mittig, und der Leuchtschein an Überschrift und Countdown fehlte. Beides hatte der neue Theme-Schutz mitgenommen.
 
 = 0.7.2 =
 * Fix: In Themes, die eigene Regeln auf Überschriften und Absätze legen, wurden die Spiel-Overlays verformt. Auf adkru.de kam die Popup-Überschrift mit 75px statt 48px und in der Theme-Schrift durch, jeder Absatz bekam 50px Abstand darunter, und der Screen "Name vergeben" war oben und unten abgeschnitten. Die Overlay-Styles setzen sich jetzt gegen Theme-Regeln durch.

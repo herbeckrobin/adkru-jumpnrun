@@ -50,6 +50,7 @@
 
 .jnr-wrap .jnr-sidebar {
   color: #fff !important;
+  text-align: left !important;
   font-family: system-ui, -apple-system, sans-serif !important;
   /* Feste Breite im Game-Over-Flexrow — sonst kollabiert der Inhalt */
   flex: 0 0 260px;
@@ -225,6 +226,7 @@
   -webkit-backdrop-filter: blur(4px);
   color: #fff !important;
   font-family: system-ui, -apple-system, sans-serif !important;
+  text-align: center !important;
   z-index: 10;
   padding: 32px 24px !important;
   padding: clamp(10px, 3.3cqw, 36px) clamp(8px, 2.5cqw, 28px) !important;
@@ -316,7 +318,7 @@
   line-height: 1.1 !important;
   text-shadow:
     0 0 30px rgba(79, 195, 247, 0.5),
-    0 2px 8px rgba(0, 0, 0, 0.8);
+    0 2px 8px rgba(0, 0, 0, 0.8) !important;
   color: #fff !important;
 }
 
@@ -497,7 +499,7 @@
     2px 2px 0 rgba(0, 0, 0, 0.95),
     0 4px 12px rgba(0, 0, 0, 0.85),
     0 0 50px rgba(79, 195, 247, 0.8),
-    0 0 90px rgba(79, 195, 247, 0.45);
+    0 0 90px rgba(79, 195, 247, 0.45) !important;
   font-family: ui-monospace, 'SF Mono', Menlo, Consolas, 'Courier New', monospace !important;
 }
 
