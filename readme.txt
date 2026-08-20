@@ -4,7 +4,7 @@ Tags: game, jump-and-run, shortcode, highscore
 Requires at least: 6.5
 Tested up to: 6.9
 Requires PHP: 8.2
-Stable tag: 0.7.1
+Stable tag: 0.7.2
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -31,6 +31,12 @@ Updates kommen per GitHub-Release. Einmal per ZIP installieren, danach 1-Klick-U
 4. Spiel einsetzen, wahlweise per Shortcode `[jumpnrun]`, Gutenberg-Block oder Elementor-Widget
 
 == Changelog ==
+
+= 0.7.2 =
+* Fix: In Themes, die eigene Regeln auf Überschriften und Absätze legen, wurden die Spiel-Overlays verformt. Auf adkru.de kam die Popup-Überschrift mit 75px statt 48px und in der Theme-Schrift durch, jeder Absatz bekam 50px Abstand darunter, und der Screen "Name vergeben" war oben und unten abgeschnitten. Die Overlay-Styles setzen sich jetzt gegen Theme-Regeln durch.
+* Schriftgrößen in den Overlays skalieren mit dem Spielfeld statt mit der Fensterbreite. Im Vollbild und in schmalen Einbettungen stimmen die Proportionen jetzt.
+* Fix: Vom Spielfeld geerbte line-height 0 hätte mehrzeilige Texte in Rang-Zeile, Scoreboard-Titel und Ladeanzeige übereinandergelegt.
+* Passt ein Screen nicht in die Höhe, wird er scrollbar statt abgeschnitten. Der Umbruch von Scoreboard und Inhalt auf eine Spalte richtet sich nach der Spielfeldbreite statt nach der Fensterbreite.
 
 = 0.7.1 =
 * Text im Rabattcode-Popup angepasst: Überschrift lautet jetzt "Rabattcode freigeschaltet!", die Zeile darunter "Dein persönlicher Rabattcode für unseren Onlineshop:"
