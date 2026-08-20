@@ -118,8 +118,8 @@ class GameUI {
     this.closeDiscountBtn = el('button', 'jnr-btn', 'Weiterspielen');
     this.discountCountdownEl = el('p', 'jnr-countdown jnr-hidden', '');
     this.discountPopup.append(
-      el('h2', 'jnr-title', 'Bonus freigeschaltet!'),
-      el('p', 'jnr-subtitle', 'Dein persönlicher Rabattcode:'),
+      el('h2', 'jnr-title', 'Rabattcode freigeschaltet!'),
+      el('p', 'jnr-subtitle', 'Dein persönlicher Rabattcode für unseren Onlineshop:'),
       this.discountCodeEl,
       el('p', 'jnr-subtitle', 'Code kopieren und beim Checkout einlösen.'),
       this.closeDiscountBtn,
