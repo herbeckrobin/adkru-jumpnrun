@@ -94,35 +94,85 @@ final class GameShortcodeEnqueueTest extends TestCase
     {
         unset($GLOBALS['post']);
 
-        $modules = [];
+        $scripts = [];
 
-        Functions\when('wp_enqueue_script_module')->alias(
-            static function (string $handle) use (&$modules): void {
-                $modules[] = $handle;
+        Functions\when('wp_enqueue_script')->alias(
+            static function (string $handle) use (&$scripts): void {
+                $scripts[] = $handle;
             }
         );
         Functions\when('wp_enqueue_style')->justReturn(true);
 
         (new GameRenderer())->enqueueAssets();
 
-        self::assertSame(['jumpnrun-client'], $modules);
+        self::assertSame([GameRenderer::SCRIPT_HANDLE], $scripts);
     }
 
-    /** Das Bundle wird als Script-Modul geladen, nicht als klassisches Script. */
-    public function testClientIsLoadedAsScriptModuleNotAsClassicScript(): void
+    /**
+     * Das Bundle läuft als klassisches Script, nicht über die
+     * Script-Modules-API.
+     *
+     * WordPress druckt Script Modules unter einem Block-Theme in wp_head
+     * (wp-includes/class-wp-script-modules.php: wp_is_block_theme() ? 'wp_head'
+     * : 'wp_footer'). Das Enqueue passiert aber erst beim Rendern des Inhalts,
+     * da ist wp_head durch: das Modul wird registriert und nie gedruckt, das
+     * Spiel bleibt unsichtbar. Genau das ist auf adkru.de passiert, als das
+     * Classic-Theme durch ein Block-Theme ersetzt wurde (07.09.2026).
+     */
+    public function testClientIsLoadedAsClassicScriptSoBlockThemesPrintIt(): void
     {
-        $classic = 0;
+        $modules = 0;
 
-        Functions\when('wp_enqueue_script_module')->justReturn(true);
+        Functions\when('wp_enqueue_script')->justReturn(true);
         Functions\when('wp_enqueue_style')->justReturn(true);
-        Functions\when('wp_enqueue_script')->alias(
-            static function () use (&$classic): void {
-                $classic++;
+        Functions\when('wp_enqueue_script_module')->alias(
+            static function () use (&$modules): void {
+                $modules++;
             }
         );
 
         (new GameRenderer())->enqueueAssets();
 
-        self::assertSame(0, $classic, 'Vite liefert ein ES-Modul, wp_enqueue_script bindet es falsch ein.');
+        self::assertSame(
+            0,
+            $modules,
+            'Script Modules landen unter Block-Themes in wp_head und werden beim Rendern nie gedruckt.'
+        );
+    }
+
+    /**
+     * Das Bundle ist ein ES-Modul (top-level export), ohne type="module" wirft
+     * der Browser einen SyntaxError. Das Attribut kommt vom Filter nach.
+     */
+    public function testScriptTagFilterAddsTypeModuleForTheBundleOnly(): void
+    {
+        $filter = null;
+
+        Functions\when('add_filter')->alias(
+            static function (string $hook, callable $cb) use (&$filter): bool {
+                if ('script_loader_tag' === $hook) {
+                    $filter = $cb;
+                }
+                return true;
+            }
+        );
+
+        GameRenderer::registerScriptTypeFilter();
+
+        self::assertIsCallable($filter, 'Der Filter auf script_loader_tag fehlt.');
+
+        $eigenes = '<script src="client.js" id="jumpnrun-client-js"></script>';
+        $fremdes = '<script src="jquery.js" id="jquery-core-js"></script>';
+
+        self::assertSame(
+            '<script type="module" src="client.js" id="jumpnrun-client-js"></script>',
+            $filter($eigenes, GameRenderer::SCRIPT_HANDLE)
+        );
+        self::assertSame($fremdes, $filter($fremdes, 'jquery-core'));
+        self::assertSame(
+            '<script type="module" src="client.js"></script>',
+            $filter('<script type="module" src="client.js"></script>', GameRenderer::SCRIPT_HANDLE),
+            'Ein bereits gesetztes type="module" darf nicht doppelt eingefügt werden.'
+        );
     }
 }
