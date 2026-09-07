@@ -4,7 +4,7 @@ Tags: game, jump-and-run, shortcode, highscore
 Requires at least: 6.5
 Tested up to: 6.9
 Requires PHP: 8.2
-Stable tag: 0.7.3
+Stable tag: 0.7.4
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -31,6 +31,9 @@ Updates kommen per GitHub-Release. Einmal per ZIP installieren, danach 1-Klick-U
 4. Spiel einsetzen, wahlweise per Shortcode `[jumpnrun]`, Gutenberg-Block oder Elementor-Widget
 
 == Changelog ==
+
+= 0.7.4 =
+* Fix: Unter Block-Themes wurde das Spiel gar nicht mehr geladen. WordPress druckt Script Modules bei Block-Themes im wp_head, das Bundle meldet sich aber erst beim Rendern des Widgets an, also zu spät. Es wird jetzt als klassisches Skript im Footer geladen und per Filter als ES-Modul ausgezeichnet. Aufgefallen auf adkru.de nach der Umstellung vom Classic- auf ein Block-Theme.
 
 = 0.7.3 =
 * Fix: Beschriftungen in Buttons standen seit 0.7.2 linksbündig statt mittig, und der Leuchtschein an Überschrift und Countdown fehlte. Beides hatte der neue Theme-Schutz mitgenommen.

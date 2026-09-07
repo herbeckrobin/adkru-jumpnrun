@@ -18,6 +18,9 @@ use Jumpnrun\Config\ConfigService;
  */
 final class GameRenderer
 {
+    /** Script-Handle des Spiel-Bundles. */
+    public const SCRIPT_HANDLE = 'jumpnrun-client';
+
     /**
      * Lädt Client-Skript und CSS.
      *
@@ -28,16 +31,62 @@ final class GameRenderer
      * Markup rendert, das Bundle fehlt, der Besucher sieht eine leere Fläche.
      * wp_enqueue_* im Shortcode-Callback ist zulässig, die Ausgabe landet
      * dann im Footer.
+     *
+     * Bewusst wp_enqueue_script() statt wp_enqueue_script_module(): WordPress
+     * druckt Script Modules je nach Theme-Typ an verschiedenen Stellen
+     * (wp-includes/class-wp-script-modules.php, add_hooks):
+     *
+     *     $position = wp_is_block_theme() ? 'wp_head' : 'wp_footer';
+     *
+     * Bei einem Block-Theme ist wp_head längst durch, wenn der Seiteninhalt
+     * gerendert wird. Ein Enqueue aus render() heraus registriert das Modul
+     * dann zwar, gedruckt wird es nie: Root-Container und Config stehen im
+     * HTML, das Bundle fehlt, das Spiel bleibt unsichtbar. Genau das ist auf
+     * adkru.de passiert, als das Classic-Theme durch ein Block-Theme ersetzt
+     * wurde (07.09.2026).
+     *
+     * Klassische Skripte werden dagegen immer im Footer gedruckt, also nach
+     * dem Content und unabhängig vom Theme-Typ. Das Bundle ist self-contained
+     * und hat keine bare imports, es braucht die Importmap der Script-Modules-
+     * API also nicht. Das type="module" setzt der Filter unten nach.
      */
     public function enqueueAssets(): void
     {
         $script = JUMPNRUN_URL . 'assets/game/client.js';
         $css = JUMPNRUN_URL . 'assets/game/client.css';
 
-        wp_enqueue_script_module('jumpnrun-client', $script, [], JUMPNRUN_VERSION);
+        wp_enqueue_script(self::SCRIPT_HANDLE, $script, [], JUMPNRUN_VERSION, true);
         if (file_exists(JUMPNRUN_DIR . 'assets/game/client.css')) {
             wp_enqueue_style('jumpnrun-client', $css, [], JUMPNRUN_VERSION);
         }
+    }
+
+    /**
+     * Hängt type="module" an das Script-Tag des Bundles.
+     *
+     * Das Bundle ist ein ES-Modul (top-level export), ohne das Attribut wirft
+     * der Browser einen SyntaxError. Registriert wird der Filter beim
+     * Plugin-Start, nicht erst im Enqueue: script_loader_tag läuft erst beim
+     * Drucken im Footer, eine späte Registrierung würde aber greifen, und
+     * eine frühe kostet nichts.
+     */
+    public static function registerScriptTypeFilter(): void
+    {
+        add_filter(
+            'script_loader_tag',
+            static function (string $tag, string $handle): string {
+                if (self::SCRIPT_HANDLE !== $handle) {
+                    return $tag;
+                }
+                if (str_contains($tag, ' type="module"')) {
+                    return $tag;
+                }
+
+                return str_replace('<script ', '<script type="module" ', $tag);
+            },
+            10,
+            2
+        );
     }
 
     /**
